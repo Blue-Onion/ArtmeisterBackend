@@ -11,9 +11,6 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 
 	"net/http"
-	"time"
-
-	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -92,12 +89,11 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := h.Repo.CreateUser(r.Context(), database.CreateUserParams{
-		ID:        uuid.New(),
-		Name:      param.Name,
-		Email:     param.Email,
-		Password:  hashPass,
-		Createdat: time.Now(),
-		Updatedat: time.Now(),
+		Name:     param.Name,
+		Email:    param.Email,
+		Password: hashPass,
+		Status:   "pending",
+		Role:     "user",
 	})
 	if err != nil {
 		handler.RespondWithError(w, 500, "Couldn't create user")
