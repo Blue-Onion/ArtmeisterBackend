@@ -4,9 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
-	"github.com/Blue-Onion/RestApi-Go/handler"
-	"github.com/Blue-Onion/RestApi-Go/utlis"
+	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
+
 	"github.com/google/uuid"
 )
 

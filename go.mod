@@ -3,7 +3,6 @@ module github.com/Blue-Onion/ArtmeisterBackend
 go 1.25.3
 
 require (
-	github.com/Blue-Onion/RestApi-Go v0.0.0-20260503092323-356ed873a93d
 	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/cors v1.2.2
 	github.com/golang-jwt/jwt/v4 v4.5.2

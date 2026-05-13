@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Blue-Onion/RestApi-Go/config"
+	"github.com/Blue-Onion/ArtmeisterBackend/config"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/Blue-Onion/RestApi-Go/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"math"
 	"net"
 	"net/http"
