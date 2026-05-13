@@ -4,13 +4,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
+	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/model"
+	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/Blue-Onion/RestApi-Go/handler"
-	"github.com/Blue-Onion/RestApi-Go/internal/database"
-	"github.com/Blue-Onion/RestApi-Go/model"
-	"github.com/Blue-Onion/RestApi-Go/utlis"
-	"github.com/google/uuid"
+
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Handler struct {

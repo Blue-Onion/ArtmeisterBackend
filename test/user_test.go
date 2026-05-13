@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/Blue-Onion/RestApi-Go/handler/user"
-	"github.com/Blue-Onion/RestApi-Go/internal/database"
-	"github.com/Blue-Onion/RestApi-Go/model"
-	"github.com/Blue-Onion/RestApi-Go/utlis"
-	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
+	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/model"
+	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
+	"github.com/google/uuid"
 )
 
 type MockRepo struct {

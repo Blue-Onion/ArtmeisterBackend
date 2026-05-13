@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/Blue-Onion/RestApi-Go/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )

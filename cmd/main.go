@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Blue-Onion/RestApi-Go/config"
-	"github.com/Blue-Onion/RestApi-Go/handler"
-	"github.com/Blue-Onion/RestApi-Go/middleware"
+	"github.com/Blue-Onion/ArtmeisterBackend/config"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
+	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 
-	"github.com/Blue-Onion/RestApi-Go/handler/user"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 )
