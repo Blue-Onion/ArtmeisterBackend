@@ -7,91 +7,158 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO
-    users (
-        id,
-        Name,
-        Email,
-        password,
-        createdAt,
-        updatedAt
-    )
-VALUES ($1, $2, $3, $4,$5,$6) rETURNING id,
+INSERT INTO users (
     name,
-    createdAt,
-    updatedAt
+    email,
+    password,
+    batch,
+    status,
+    role
+)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING 
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    created_at,
+    updated_at
 `
 
 type CreateUserParams struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Password  string
-	Createdat time.Time
-	Updatedat time.Time
+	Name     string
+	Email    string
+	Password string
+	Batch    sql.NullString
+	Status   AccountStatus
+	Role     UserRole
 }
 
 type CreateUserRow struct {
 	ID        uuid.UUID
 	Name      string
-	Createdat time.Time
-	Updatedat time.Time
+	Email     string
+	Batch     sql.NullString
+	Status    AccountStatus
+	Role      UserRole
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
-		arg.ID,
 		arg.Name,
 		arg.Email,
 		arg.Password,
-		arg.Createdat,
-		arg.Updatedat,
+		arg.Batch,
+		arg.Status,
+		arg.Role,
 	)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.Email,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT name, email FROM users WHERE id = $1
+SELECT 
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    created_at,
+    updated_at
+FROM users
+WHERE id = $1
 `
 
 type GetUserRow struct {
-	Name  string
-	Email string
+	ID        uuid.UUID
+	Name      string
+	Email     string
+	Batch     sql.NullString
+	Status    AccountStatus
+	Role      UserRole
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
 	var i GetUserRow
-	err := row.Scan(&i.Name, &i.Email)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name password FROM users WHERE email = $1
+SELECT 
+    id,
+    name,
+    email,
+    password,
+    batch,
+    status,
+    role,
+    created_at,
+    updated_at
+FROM users
+WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID       uuid.UUID
-	Password string
+	ID        uuid.UUID
+	Name      string
+	Email     string
+	Password  string
+	Batch     sql.NullString
+	Status    AccountStatus
+	Role      UserRole
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
-	err := row.Scan(&i.ID, &i.Password)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Password,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
@@ -101,25 +168,41 @@ SET
     name = $2,
     email = $3,
     password = $4,
-    updatedAt = $5
+    batch = $5,
+    status = $6,
+    role = $7,
+    updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, email, createdAt, updatedAt
+RETURNING
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    created_at,
+    updated_at
 `
 
 type UpdateUserParams struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Password  string
-	Updatedat time.Time
+	ID       uuid.UUID
+	Name     string
+	Email    string
+	Password string
+	Batch    sql.NullString
+	Status   AccountStatus
+	Role     UserRole
 }
 
 type UpdateUserRow struct {
 	ID        uuid.UUID
 	Name      string
 	Email     string
-	Createdat time.Time
-	Updatedat time.Time
+	Batch     sql.NullString
+	Status    AccountStatus
+	Role      UserRole
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
@@ -128,15 +211,20 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		arg.Name,
 		arg.Email,
 		arg.Password,
-		arg.Updatedat,
+		arg.Batch,
+		arg.Status,
+		arg.Role,
 	)
 	var i UpdateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -146,24 +234,36 @@ UPDATE users
 SET
     name = $2,
     email = $3,
-    updatedAt = $4
+    batch = $4,
+    updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, email, createdAt, updatedAt
+RETURNING
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    created_at,
+    updated_at
 `
 
 type UpdateUserProfileParams struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Updatedat time.Time
+	ID    uuid.UUID
+	Name  string
+	Email string
+	Batch sql.NullString
 }
 
 type UpdateUserProfileRow struct {
 	ID        uuid.UUID
 	Name      string
 	Email     string
-	Createdat time.Time
-	Updatedat time.Time
+	Batch     sql.NullString
+	Status    AccountStatus
+	Role      UserRole
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
@@ -171,15 +271,18 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.ID,
 		arg.Name,
 		arg.Email,
-		arg.Updatedat,
+		arg.Batch,
 	)
 	var i UpdateUserProfileRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
