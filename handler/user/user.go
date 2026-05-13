@@ -4,12 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
-
 	"net/http"
 )
 
@@ -62,7 +60,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
+		Name:     "authToken",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -92,11 +90,11 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Name:     param.Name,
 		Email:    param.Email,
 		Password: hashPass,
-		Status:   "pending",
-		Role:     "user",
+		Status:   database.AccountStatusPending,
+		Role:     database.UserRoleUser,
 	})
 	if err != nil {
-		handler.RespondWithError(w, 500, "Couldn't create user")
+		handler.RespondWithError(w, 500, err.Error())
 		return
 	}
 

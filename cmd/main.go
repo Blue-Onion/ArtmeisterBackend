@@ -51,11 +51,7 @@ func main() {
 	router.Get("/", handler.MainPage)
 
 	// User Routes
-	userRoute := chi.NewRouter()
-	userRoute.Post("/users", userHandler.HandleCreateUser)
-	userRoute.Post("/login", userHandler.HandleLogin)
-	userRoute.Post("/logOut", middlewareHandler.MiddlewareAuth(http.HandlerFunc(userHandler.HandleLogOut)))
-
+	userRoute := user.UserMethod(userHandler, middlewareHandler)
 	router.Mount("/api", userRoute)
 
 	server := http.Server{

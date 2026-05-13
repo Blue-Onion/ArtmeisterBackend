@@ -22,20 +22,26 @@ type MockRepo struct {
 }
 
 func (m *MockRepo) CreateUser(ctx context.Context, arg database.CreateUserParams) (database.CreateUserRow, error) {
+	now := time.Now()
 	user := database.User{
-		ID:        arg.ID,
+		ID:        uuid.New(),
 		Name:      arg.Name,
 		Email:     arg.Email,
 		Password:  arg.Password,
-		Createdat: arg.Createdat,
-		Updatedat: arg.Updatedat,
+		CreatedAt: now,
+		UpdatedAt: now,
+		Status:    arg.Status,
+		Role:      arg.Role,
 	}
 	m.Users = append(m.Users, user)
 	return database.CreateUserRow{
 		ID:        user.ID,
 		Name:      user.Name,
-		Createdat: user.Createdat,
-		Updatedat: user.Updatedat,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Status:    user.Status,
+		Role:      user.Role,
 	}, nil
 }
 
@@ -43,8 +49,14 @@ func (m *MockRepo) GetUserByEmail(ctx context.Context, email string) (database.G
 	for _, u := range m.Users {
 		if u.Email == email {
 			return database.GetUserByEmailRow{
-				ID:       u.ID,
-				Password: u.Password,
+				ID:        u.ID,
+				Name:      u.Name,
+				Email:     u.Email,
+				Password:  u.Password,
+				CreatedAt: u.CreatedAt,
+				UpdatedAt: u.UpdatedAt,
+				Status:    u.Status,
+				Role:      u.Role,
 			}, nil
 		}
 	}
@@ -87,12 +99,11 @@ func TestHandleLogin(t *testing.T) {
 	password := "password123"
 	hash, _ := utlis.HashPassword(password)
 	userData := database.CreateUserParams{
-		ID:        uuid.New(),
-		Name:      "Test User",
-		Email:     "test@example.com",
-		Password:  hash,
-		Createdat: time.Now(),
-		Updatedat: time.Now(),
+		Name:     "Test User",
+		Email:    "test@example.com",
+		Password: hash,
+		Status:   database.AccountStatusPending,
+		Role:     database.UserRoleUser,
 	}
 	mockRepo.CreateUser(context.Background(), userData)
 
@@ -142,12 +153,12 @@ func TestHandleLogOut(t *testing.T) {
 	cookies := rr.Result().Cookies()
 	found := false
 	for _, c := range cookies {
-		if c.Name == "auth_token" && c.MaxAge == -1 {
+		if c.Name == "authToken" && c.MaxAge == -1 {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("auth_token cookie removal not found in response")
+		t.Errorf("authToken cookie removal not found in response")
 	}
 }
