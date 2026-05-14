@@ -5,9 +5,11 @@ INSERT INTO users (
     password,
     batch,
     status,
-    role
+    role,
+    image,
+    banner_image
 )
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING 
     id,
     name,
@@ -15,6 +17,8 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at;
 
@@ -27,6 +31,8 @@ SELECT
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 FROM users
@@ -42,6 +48,8 @@ SELECT
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 FROM users
@@ -57,6 +65,8 @@ SET
     batch = $5,
     status = $6,
     role = $7,
+    image = $8,
+    banner_image = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -66,6 +76,8 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at;
 
@@ -76,6 +88,8 @@ SET
     name = $2,
     email = $3,
     batch = $4,
+    image = $5,
+    banner_image = $6,
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -85,5 +99,7 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at;

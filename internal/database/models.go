@@ -100,13 +100,15 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 }
 
 type User struct {
-	ID        uuid.UUID
-	Name      string
-	Password  string
-	Email     string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Password    string
+	Email       string
+	BannerImage sql.NullString
+	Image       sql.NullString
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

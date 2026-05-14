@@ -20,9 +20,11 @@ INSERT INTO users (
     password,
     batch,
     status,
-    role
+    role,
+    image,
+    banner_image
 )
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING 
     id,
     name,
@@ -30,28 +32,34 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 `
 
 type CreateUserParams struct {
-	Name     string
-	Email    string
-	Password string
-	Batch    sql.NullString
-	Status   AccountStatus
-	Role     UserRole
+	Name        string
+	Email       string
+	Password    string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
 }
 
 type CreateUserRow struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -62,6 +70,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.Batch,
 		arg.Status,
 		arg.Role,
+		arg.Image,
+		arg.BannerImage,
 	)
 	var i CreateUserRow
 	err := row.Scan(
@@ -71,6 +81,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Batch,
 		&i.Status,
 		&i.Role,
+		&i.Image,
+		&i.BannerImage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -85,6 +97,8 @@ SELECT
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 FROM users
@@ -92,14 +106,16 @@ WHERE id = $1
 `
 
 type GetUserRow struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error) {
@@ -112,6 +128,8 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.Batch,
 		&i.Status,
 		&i.Role,
+		&i.Image,
+		&i.BannerImage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -127,6 +145,8 @@ SELECT
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 FROM users
@@ -134,15 +154,17 @@ WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Password  string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Password    string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -156,6 +178,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Batch,
 		&i.Status,
 		&i.Role,
+		&i.Image,
+		&i.BannerImage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -171,6 +195,8 @@ SET
     batch = $5,
     status = $6,
     role = $7,
+    image = $8,
+    banner_image = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -180,29 +206,35 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 `
 
 type UpdateUserParams struct {
-	ID       uuid.UUID
-	Name     string
-	Email    string
-	Password string
-	Batch    sql.NullString
-	Status   AccountStatus
-	Role     UserRole
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Password    string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
 }
 
 type UpdateUserRow struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
@@ -214,6 +246,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		arg.Batch,
 		arg.Status,
 		arg.Role,
+		arg.Image,
+		arg.BannerImage,
 	)
 	var i UpdateUserRow
 	err := row.Scan(
@@ -223,6 +257,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.Batch,
 		&i.Status,
 		&i.Role,
+		&i.Image,
+		&i.BannerImage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -235,6 +271,8 @@ SET
     name = $2,
     email = $3,
     batch = $4,
+    image = $5,
+    banner_image = $6,
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -244,26 +282,32 @@ RETURNING
     batch,
     status,
     role,
+    image,
+    banner_image,
     created_at,
     updated_at
 `
 
 type UpdateUserProfileParams struct {
-	ID    uuid.UUID
-	Name  string
-	Email string
-	Batch sql.NullString
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       sql.NullString
+	Image       sql.NullString
+	BannerImage sql.NullString
 }
 
 type UpdateUserProfileRow struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Batch     sql.NullString
-	Status    AccountStatus
-	Role      UserRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
@@ -272,6 +316,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.Name,
 		arg.Email,
 		arg.Batch,
+		arg.Image,
+		arg.BannerImage,
 	)
 	var i UpdateUserProfileRow
 	err := row.Scan(
@@ -281,6 +327,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.Batch,
 		&i.Status,
 		&i.Role,
+		&i.Image,
+		&i.BannerImage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
