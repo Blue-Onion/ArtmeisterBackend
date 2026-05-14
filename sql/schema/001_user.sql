@@ -9,6 +9,8 @@ CREATE TABLE users (
     name TEXT NOT NULL,
     password TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
+    banner_image TEXT, 
+    image TEXT, 
     batch TEXT,
     status public.account_status NOT NULL DEFAULT 'pending',
     role public.user_role NOT NULL DEFAULT 'user',

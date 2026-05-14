@@ -42,7 +42,7 @@ func RespondWithHTML(w http.ResponseWriter, code int, payload string) {
 	w.WriteHeader(code)
 	w.Write([]byte(payload))
 }
-func MainPage(w http.ResponseWriter, r *http.Request){
+func MainPage(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("template/index.html")
 	if err != nil {
 		RespondWithError(w, 500, "Could not read template")

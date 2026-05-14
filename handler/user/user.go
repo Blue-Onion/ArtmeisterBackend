@@ -4,23 +4,51 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
-	"net/http"
 )
 
 type Handler struct {
 	Repo database.UserRepository
 }
 
+func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value("user").(middleware.User)
+	if !ok {
+		handler.RespondWithError(w, 400, "Not AutheticateUser")
+		return
+	}
+	err := r.ParseMultipartForm(20 << 20)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	file, fileHeader, err := r.FormFile("image")
+
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	defer file.Close()
+	path := fmt.Sprintf("uploads/%s", user.ID.String())
+	err = utlis.SaveLocal(file, fileHeader, path)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+}
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	params := model.AutheticateUser{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&params)
 	if err != nil {
-		handler.RespondWithError(w, 400, "Error in Parsing Json")
+		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
 	user, err := h.Repo.GetUserByEmail(r.Context(), params.Email)
@@ -54,6 +82,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600 * 24,
 		SameSite: http.SameSiteLaxMode,
 	})
+	fmt.Print(token)
 	handler.RespondWithJson(w, 200, map[string]string{
 		"Message": "Login Successfull",
 	})

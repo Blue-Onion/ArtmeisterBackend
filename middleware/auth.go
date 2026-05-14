@@ -7,7 +7,6 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
-
 	"github.com/google/uuid"
 )
 
@@ -15,27 +14,47 @@ type Handler struct {
 	Repo database.UserRepository
 }
 
+type User struct {
+	ID    uuid.UUID
+	Name  string
+	Email string
+}
+
 func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, err := r.Cookie("authToken")
-		if err != nil {
-			handler.RespondWithError(w, 401, "Error Occured in getting Token")
-			return
-		}
-		userId, err := utlis.GetUserIdJwt(token)
-		if err != nil {
-			handler.RespondWithError(w, 400, "Invalid User id")
-			return
-		}
-		id, err := uuid.Parse(userId)
-		user, err := h.Repo.GetUser(r.Context(), id)
-		if err != nil {
-			handler.RespondWithError(w, 401, "user not found")
-			return
-		}
-		ctx := context.WithValue(r.Context(), "user", user)
+		{
+			tokenCookie, err := r.Cookie("authToken")
+			if err != nil {
+				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: login required")
+				return
+			}
 
-		next.ServeHTTP(w, r.WithContext(ctx))
+			userId, err := utlis.GetUserIdJwt(tokenCookie)
+			if err != nil {
+				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: invalid or expired token")
+				return
+			}
+
+			id, err := uuid.Parse(userId)
+			if err != nil {
+				handler.RespondWithError(w, http.StatusBadRequest, "Invalid user id format")
+				return
+			}
+
+			user, err := h.Repo.GetUser(r.Context(), id)
+			if err != nil {
+				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
+				return
+			}
+			userInfo := User{
+				ID:    id,
+				Name:  user.Name,
+				Email: user.Email,
+			}
+			ctx := context.WithValue(r.Context(), "user", userInfo)
+			next.ServeHTTP(w, r.WithContext(ctx))
+
+		}
 
 	}
 }
