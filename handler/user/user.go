@@ -226,3 +226,29 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, res)
 }
+func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(middleware.User)
+	req := model.PatchUserPassword{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&req)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	password, err := utlis.HashPassword(req.Password)
+
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	params := database.PatchUserPasswordParams{
+		ID:       user.ID,
+		Password: password,
+	}
+	res, err := h.Repo.PatchUserPassword(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
+}

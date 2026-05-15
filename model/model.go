@@ -21,7 +21,6 @@ type CreateUser struct {
 	Batch    string
 }
 type AutheticateUser struct {
-	Name     string
 	Email    string
 	Password string
 }
@@ -29,4 +28,7 @@ type PatchUserProfileRequest struct {
 	Name  *string `json:"name"`
 	Email *string `json:"email"`
 	Batch *string `json:"batch"`
+}
+type PatchUserPassword struct {
+	Password string `json:"password"`
 }

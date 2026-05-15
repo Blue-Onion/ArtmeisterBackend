@@ -11,4 +11,5 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	PatchUserImages(ctx context.Context, arg PatchUserImagesParams) (PatchUserImagesRow, error)
 	PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error)
+	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error)
 }
