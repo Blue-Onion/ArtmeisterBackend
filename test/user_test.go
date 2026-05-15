@@ -107,7 +107,7 @@ func TestHandleLogin(t *testing.T) {
 	}
 	mockRepo.CreateUser(context.Background(), userData)
 
-	loginData := model.AutheticateUser{
+	loginData := model.AuthenticateUser{
 		Email:    "test@example.com",
 		Password: password,
 	}
