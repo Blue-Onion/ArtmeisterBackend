@@ -7,22 +7,22 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID
-	Name      string
-	Email     string
-	Password  string
-	Createdat time.Time
-	Updatedat time.Time
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 type CreateUser struct {
-	Name     string
-	Email    string
-	Password string
-	Batch    string
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Batch    string `json:"batch"`
 }
-type AutheticateUser struct {
-	Email    string
-	Password string
+type AuthenticateUser struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 type PatchUserProfileRequest struct {
 	Name  *string `json:"name"`
@@ -30,5 +30,6 @@ type PatchUserProfileRequest struct {
 	Batch *string `json:"batch"`
 }
 type PatchUserPassword struct {
-	Password string `json:"password"`
+	OldPassword string `json:"old_password"`
+	Password    string `json:"password"`
 }

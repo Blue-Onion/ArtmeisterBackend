@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
@@ -12,7 +14,6 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
-	"net/http"
 )
 
 type Handler struct {
@@ -20,31 +21,31 @@ type Handler struct {
 }
 
 func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
-	user, ok := r.Context().Value("user").(middleware.User)
+	user, ok := middleware.GetUser(r.Context())
 	if !ok {
-		handler.RespondWithError(w, 400, "Not AutheticateUser")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 	file, fileHeader, err := r.FormFile("image")
-
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
 		return
 	}
 	defer file.Close()
 	path := fmt.Sprintf("uploads/%s", user.ID.String())
 	filepath, err := utlis.SaveLocal(file, fileHeader, path)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
 		return
 	}
-	handler.RespondWithJson(w, 200, filepath)
+	handler.RespondWithJson(w, http.StatusOK, filepath)
 }
+
 func toNilStr(str *string) sql.NullString {
 	if str == nil {
 		return sql.NullString{
@@ -56,34 +57,32 @@ func toNilStr(str *string) sql.NullString {
 		Valid:  true,
 	}
 }
+
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	params := model.AutheticateUser{}
+	params := model.AuthenticateUser{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&params)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	user, err := h.Repo.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-
-			handler.RespondWithError(w, 404, "User not found")
+			handler.RespondWithError(w, http.StatusNotFound, "No account found with this email")
 			return
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to look up user")
 		return
-
 	}
 	isValid := utlis.CheckPassword(user.Password, params.Password)
 	if !isValid {
-		handler.RespondWithError(w, 400, "Incorrect Password")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Incorrect password")
 		return
-
 	}
 	token, err := utlis.GenerateJwt(user.ID)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authentication token")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -95,10 +94,11 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600 * 24,
 		SameSite: http.SameSiteLaxMode,
 	})
-	handler.RespondWithJson(w, 200, map[string]string{
-		"Message": "Login Successfull",
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{
+		"message": "Login successful",
 	})
 }
+
 func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "authToken",
@@ -109,8 +109,8 @@ func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
-	handler.RespondWithJson(w, 200, map[string]string{
-		"Message": "LogOut Successfully",
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{
+		"message": "Logged out successfully",
 	})
 }
 
@@ -119,12 +119,12 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&param)
 	if err != nil {
-		handler.RespondWithError(w, 400, "Error in Parsing Json")
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	hashPass, err := utlis.HashPassword(param.Password)
 	if err != nil {
-		handler.RespondWithError(w, 400, "Error in Hashing Password")
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
 	user, err := h.Repo.CreateUser(r.Context(), database.CreateUserParams{
@@ -136,29 +136,33 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Role:     database.UserRoleUser,
 	})
 	if err != nil {
-		handler.RespondWithError(w, 500, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
-
-	handler.RespondWithJson(w, 201, user)
+	handler.RespondWithJson(w, http.StatusCreated, user)
 }
+
 func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(middleware.User)
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	userId, err := uuid.Parse(id)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid user ID format")
 		return
 	}
-	if user.Role != database.UserRoleAdmin || user.ID != userId {
-		handler.RespondWithError(w, 403, "Not Authorized to Change User Data")
+	if user.Role != database.UserRoleAdmin && user.ID != userId {
+		handler.RespondWithError(w, http.StatusForbidden, "You are not authorized to update this profile")
 		return
 	}
 	req := model.PatchUserProfileRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&req)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	params := database.PatchUserProfileParams{
@@ -169,76 +173,91 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	}
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update profile")
 		return
 	}
-	handler.RespondWithJson(w, 200, updatedUser)
+	handler.RespondWithJson(w, http.StatusOK, updatedUser)
 }
+
 func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(middleware.User)
-	handler.RespondWithJson(w, 200, user)
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 	path := fmt.Sprintf("uploads/%s", user.ID.String())
+	params := database.PatchUserImagesParams{
+		ID: user.ID,
+	}
+	hasUpdate := false
+
 	userfile, userfileHeader, err := r.FormFile("user_image")
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
-	bannerFile, bannerFileHeader, err := r.FormFile("banner_image")
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
-	if userfile == nil && bannerFile == nil {
-		handler.RespondWithError(w, 400, "Bhen Ke lode")
-		return
-	}
-	params := database.PatchUserImagesParams{}
-	if userfile != nil {
+	if err == nil && userfile != nil {
 		defer userfile.Close()
-		userImageFilePath, err := utlis.SaveLocal(userfile, userfileHeader, path)
-		if err != nil {
-			handler.RespondWithError(w, 400, err.Error())
+		userImageFilePath, saveErr := utlis.SaveLocal(userfile, userfileHeader, path)
+		if saveErr != nil {
+			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save profile image")
 			return
 		}
-		userImageUrl := toNilStr(&userImageFilePath)
-		params.Image = userImageUrl
+		params.Image = toNilStr(&userImageFilePath)
+		hasUpdate = true
 	}
 
-	if bannerFile != nil {
-		defer userfile.Close()
-		bannerImageFilePath, err := utlis.SaveLocal(bannerFile, bannerFileHeader, path)
-		if err != nil {
-			handler.RespondWithError(w, 400, err.Error())
+	bannerFile, bannerFileHeader, err := r.FormFile("banner_image")
+	if err == nil && bannerFile != nil {
+		defer bannerFile.Close()
+		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, bannerFileHeader, path)
+		if saveErr != nil {
+			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
 			return
 		}
-		bannerImageURL := toNilStr(&bannerImageFilePath)
-		params.BannerImage = bannerImageURL
+		params.BannerImage = toNilStr(&bannerImageFilePath)
+		hasUpdate = true
+	}
+
+	if !hasUpdate {
+		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (user_image or banner_image) is required")
+		return
 	}
 	res, err := h.Repo.PatchUserImages(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
+
 func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(middleware.User)
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
 	req := model.PatchUserPassword{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&req)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	password, err := utlis.HashPassword(req.Password)
-
+	dbUser, err := h.Repo.GetUserByEmail(r.Context(), user.Email)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to verify user")
+		return
+	}
+	if !utlis.CheckPassword(dbUser.Password, req.OldPassword) {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Current password is incorrect")
+		return
+	}
+
+	password, err := utlis.HashPassword(req.Password)
+	if err != nil {
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process new password")
 		return
 	}
 	params := database.PatchUserPasswordParams{
@@ -247,8 +266,8 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := h.Repo.PatchUserPassword(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update password")
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
