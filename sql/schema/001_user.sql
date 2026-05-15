@@ -12,7 +12,7 @@ CREATE TABLE users (
 
     banner_image TEXT DEFAULT '',
     image TEXT DEFAULT '',
-    batch TEXT DEFAULT '',
+    batch TEXT NOT NULL, 
 
     status public.account_status NOT NULL DEFAULT 'pending',
     role public.user_role NOT NULL DEFAULT 'user',

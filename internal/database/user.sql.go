@@ -42,7 +42,7 @@ type CreateUserParams struct {
 	Name        string
 	Email       string
 	Password    string
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	Image       sql.NullString
@@ -53,7 +53,7 @@ type CreateUserRow struct {
 	ID          uuid.UUID
 	Name        string
 	Email       string
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	Image       sql.NullString
@@ -109,7 +109,7 @@ type GetUserRow struct {
 	ID          uuid.UUID
 	Name        string
 	Email       string
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	Image       sql.NullString
@@ -158,7 +158,7 @@ type GetUserByEmailRow struct {
 	Name        string
 	Email       string
 	Password    string
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	Image       sql.NullString
@@ -186,93 +186,79 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	return i, err
 }
 
-const updateUser = `-- name: UpdateUser :one
+const patchUserImages = `-- name: PatchUserImages :one
 UPDATE users
 SET
-    name = $2,
-    email = $3,
-    password = $4,
-    batch = $5,
-    status = $6,
-    role = $7,
-    image = $8,
-    banner_image = $9,
+    image = COALESCE($2, image),
+    banner_image = COALESCE($3, banner_image),
     updated_at = NOW()
 WHERE id = $1
 RETURNING
     id,
-    name,
-    email,
-    batch,
-    status,
-    role,
     image,
     banner_image,
-    created_at,
     updated_at
 `
 
-type UpdateUserParams struct {
+type PatchUserImagesParams struct {
 	ID          uuid.UUID
-	Name        string
-	Email       string
-	Password    string
-	Batch       sql.NullString
-	Status      AccountStatus
-	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
 }
 
-type UpdateUserRow struct {
+type PatchUserImagesRow struct {
 	ID          uuid.UUID
-	Name        string
-	Email       string
-	Batch       sql.NullString
-	Status      AccountStatus
-	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
-	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
-	row := q.db.QueryRowContext(ctx, updateUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.Password,
-		arg.Batch,
-		arg.Status,
-		arg.Role,
-		arg.Image,
-		arg.BannerImage,
-	)
-	var i UpdateUserRow
+func (q *Queries) PatchUserImages(ctx context.Context, arg PatchUserImagesParams) (PatchUserImagesRow, error) {
+	row := q.db.QueryRowContext(ctx, patchUserImages, arg.ID, arg.Image, arg.BannerImage)
+	var i PatchUserImagesRow
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.Batch,
-		&i.Status,
-		&i.Role,
 		&i.Image,
 		&i.BannerImage,
-		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const updateUserProfile = `-- name: UpdateUserProfile :one
+const patchUserPassword = `-- name: PatchUserPassword :one
 UPDATE users
 SET
-    name = $2,
-    email = $3,
-    batch = $4,
-    image = $5,
-    banner_image = $6,
+    password = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING
+    id,
+    updated_at
+`
+
+type PatchUserPasswordParams struct {
+	ID       uuid.UUID
+	Password string
+}
+
+type PatchUserPasswordRow struct {
+	ID        uuid.UUID
+	UpdatedAt time.Time
+}
+
+func (q *Queries) PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error) {
+	row := q.db.QueryRowContext(ctx, patchUserPassword, arg.ID, arg.Password)
+	var i PatchUserPasswordRow
+	err := row.Scan(&i.ID, &i.UpdatedAt)
+	return i, err
+}
+
+const patchUserProfile = `-- name: PatchUserProfile :one
+UPDATE users
+SET
+    name = COALESCE($2, name),
+    email = COALESCE($3, email),
+    batch = COALESCE($4, batch),
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -288,20 +274,18 @@ RETURNING
     updated_at
 `
 
-type UpdateUserProfileParams struct {
-	ID          uuid.UUID
-	Name        string
-	Email       string
-	Batch       sql.NullString
-	Image       sql.NullString
-	BannerImage sql.NullString
+type PatchUserProfileParams struct {
+	ID    uuid.UUID
+	Name  string
+	Email string
+	Batch string
 }
 
-type UpdateUserProfileRow struct {
+type PatchUserProfileRow struct {
 	ID          uuid.UUID
 	Name        string
 	Email       string
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	Image       sql.NullString
@@ -310,16 +294,14 @@ type UpdateUserProfileRow struct {
 	UpdatedAt   time.Time
 }
 
-func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
-	row := q.db.QueryRowContext(ctx, updateUserProfile,
+func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error) {
+	row := q.db.QueryRowContext(ctx, patchUserProfile,
 		arg.ID,
 		arg.Name,
 		arg.Email,
 		arg.Batch,
-		arg.Image,
-		arg.BannerImage,
 	)
-	var i UpdateUserProfileRow
+	var i PatchUserProfileRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

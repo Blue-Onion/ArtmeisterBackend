@@ -37,11 +37,24 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	path := fmt.Sprintf("uploads/%s", user.ID.String())
-	err = utlis.SaveLocal(file, fileHeader, path)
+	filepath, err := utlis.SaveLocal(file, fileHeader, path)
 	if err != nil {
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
+	handler.RespondWithJson(w, 200, filepath)
+}
+func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(middleware.User)
+	params := model.UpdateUser{}
+	fmt.Print(user)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+
 }
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	params := model.AutheticateUser{}
@@ -82,7 +95,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600 * 24,
 		SameSite: http.SameSiteLaxMode,
 	})
-	fmt.Print(token)
 	handler.RespondWithJson(w, 200, map[string]string{
 		"Message": "Login Successfull",
 	})
@@ -119,6 +131,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Name:     param.Name,
 		Email:    param.Email,
 		Password: hashPass,
+		Batch:    param.Batch,
 		Status:   database.AccountStatusPending,
 		Role:     database.UserRoleUser,
 	})

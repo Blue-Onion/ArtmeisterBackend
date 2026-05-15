@@ -46,12 +46,7 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
 				return
 			}
-			userInfo := User{
-				ID:    id,
-				Name:  user.Name,
-				Email: user.Email,
-			}
-			ctx := context.WithValue(r.Context(), "user", userInfo)
+			ctx := context.WithValue(r.Context(), "user", user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 
 		}

@@ -56,17 +56,12 @@ FROM users
 WHERE email = $1;
 
 
--- name: UpdateUser :one
+-- name: PatchUserProfile :one
 UPDATE users
 SET
-    name = $2,
-    email = $3,
-    password = $4,
-    batch = $5,
-    status = $6,
-    role = $7,
-    image = $8,
-    banner_image = $9,
+    name = COALESCE($2, name),
+    email = COALESCE($3, email),
+    batch = COALESCE($4, batch),
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -81,15 +76,11 @@ RETURNING
     created_at,
     updated_at;
 
-
--- name: UpdateUserProfile :one
+-- name: PatchUserAdmin :one
 UPDATE users
 SET
-    name = $2,
-    email = $3,
-    batch = $4,
-    image = $5,
-    banner_image = $6,
+    status = COALESCE($2, status),
+    role = COALESCE($3, role),
     updated_at = NOW()
 WHERE id = $1
 RETURNING
@@ -102,4 +93,28 @@ RETURNING
     image,
     banner_image,
     created_at,
+    updated_at;
+
+-- name: PatchUserPassword :one
+UPDATE users
+SET
+    password = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING
+    id,
+    updated_at;
+
+
+-- name: PatchUserImages :one
+UPDATE users
+SET
+    image = COALESCE($2, image),
+    banner_image = COALESCE($3, banner_image),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING
+    id,
+    image,
+    banner_image,
     updated_at;

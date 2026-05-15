@@ -106,7 +106,7 @@ type User struct {
 	Email       string
 	BannerImage sql.NullString
 	Image       sql.NullString
-	Batch       sql.NullString
+	Batch       string
 	Status      AccountStatus
 	Role        UserRole
 	CreatedAt   time.Time
