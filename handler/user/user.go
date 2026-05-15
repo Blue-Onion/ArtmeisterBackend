@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
@@ -14,6 +12,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 type Handler struct {
@@ -45,38 +44,6 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	handler.RespondWithJson(w, 200, filepath)
-}
-func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(middleware.User)
-	id := chi.URLParam(r, "id")
-	userId, err := uuid.Parse(id)
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
-	if user.Role != database.UserRoleAdmin || user.ID != userId {
-		handler.RespondWithError(w, 403, "Not Authorized to Change User Data")
-		return
-	}
-	req := model.PatchUserProfileRequest{}
-	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&req)
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
-	params := database.PatchUserProfileParams{
-		ID:    userId,
-		Name:  toNilStr(req.Name),
-		Email: toNilStr(req.Email),
-		Batch: toNilStr(req.Batch),
-	}
-	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
-	handler.RespondWithJson(w, 200, updatedUser)
 }
 func toNilStr(str *string) sql.NullString {
 	if str == nil {
@@ -174,4 +141,88 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handler.RespondWithJson(w, 201, user)
+}
+func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(middleware.User)
+	id := chi.URLParam(r, "id")
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	if user.Role != database.UserRoleAdmin || user.ID != userId {
+		handler.RespondWithError(w, 403, "Not Authorized to Change User Data")
+		return
+	}
+	req := model.PatchUserProfileRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&req)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	params := database.PatchUserProfileParams{
+		ID:    userId,
+		Name:  toNilStr(req.Name),
+		Email: toNilStr(req.Email),
+		Batch: toNilStr(req.Batch),
+	}
+	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, updatedUser)
+}
+func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(middleware.User)
+	handler.RespondWithJson(w, 200, user)
+	err := r.ParseMultipartForm(20 << 20)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	path := fmt.Sprintf("uploads/%s", user.ID.String())
+	userfile, userfileHeader, err := r.FormFile("user_image")
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	bannerFile, bannerFileHeader, err := r.FormFile("banner_image")
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	if userfile == nil && bannerFile == nil {
+		handler.RespondWithError(w, 400, "Bhen Ke lode")
+		return
+	}
+	params := database.PatchUserImagesParams{}
+	if userfile != nil {
+		defer userfile.Close()
+		userImageFilePath, err := utlis.SaveLocal(userfile, userfileHeader, path)
+		if err != nil {
+			handler.RespondWithError(w, 400, err.Error())
+			return
+		}
+		userImageUrl := toNilStr(&userImageFilePath)
+		params.Image = userImageUrl
+	}
+
+	if bannerFile != nil {
+		defer userfile.Close()
+		bannerImageFilePath, err := utlis.SaveLocal(bannerFile, bannerFileHeader, path)
+		if err != nil {
+			handler.RespondWithError(w, 400, err.Error())
+			return
+		}
+		bannerImageURL := toNilStr(&bannerImageFilePath)
+		params.BannerImage = bannerImageURL
+	}
+	res, err := h.Repo.PatchUserImages(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
 }
