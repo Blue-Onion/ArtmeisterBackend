@@ -12,6 +12,8 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
+	"github.com/go-chi/chi"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -46,15 +48,46 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value("user").(middleware.User)
-	params := model.UpdateUser{}
-	fmt.Print(user)
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	id := chi.URLParam(r, "id")
+	userId, err := uuid.Parse(id)
 	if err != nil {
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-
+	if user.Role != database.UserRoleAdmin || user.ID != userId {
+		handler.RespondWithError(w, 403, "Not Authorized to Change User Data")
+		return
+	}
+	req := model.PatchUserProfileRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&req)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	params := database.PatchUserProfileParams{
+		ID:    userId,
+		Name:  toNilStr(req.Name),
+		Email: toNilStr(req.Email),
+		Batch: toNilStr(req.Batch),
+	}
+	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, updatedUser)
+}
+func toNilStr(str *string) sql.NullString {
+	if str == nil {
+		return sql.NullString{
+			Valid: false,
+		}
+	}
+	return sql.NullString{
+		String: *str,
+		Valid:  true,
+	}
 }
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	params := model.AutheticateUser{}

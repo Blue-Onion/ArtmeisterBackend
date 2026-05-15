@@ -59,11 +59,11 @@ WHERE email = $1;
 -- name: PatchUserProfile :one
 UPDATE users
 SET
-    name = COALESCE($2, name),
-    email = COALESCE($3, email),
-    batch = COALESCE($4, batch),
+    name = COALESCE(sqlc.narg('name')::text, name),
+    email = COALESCE(sqlc.narg('email')::text, email),
+    batch = COALESCE(sqlc.narg('batch')::text, batch),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = sqlc.arg('id')
 RETURNING
     id,
     name,
@@ -75,6 +75,7 @@ RETURNING
     banner_image,
     created_at,
     updated_at;
+
 
 -- name: PatchUserAdmin :one
 UPDATE users

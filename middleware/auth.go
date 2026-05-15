@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
@@ -15,9 +16,14 @@ type Handler struct {
 }
 
 type User struct {
-	ID    uuid.UUID
-	Name  string
-	Email string
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       string
+	Status      database.AccountStatus
+	Role        database.UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
 }
 
 func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {

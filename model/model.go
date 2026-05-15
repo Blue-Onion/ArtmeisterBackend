@@ -1,10 +1,8 @@
 package model
 
 import (
-	"database/sql"
 	"time"
 
-	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -27,11 +25,8 @@ type AutheticateUser struct {
 	Email    string
 	Password string
 }
-type UpdateUser struct {
-	Name     string
-	Email    string
-	Password string
-	Batch    sql.NullString
-	Status   database.AccountStatus
-	Role     database.UserRole
+type PatchUserProfileRequest struct {
+	Name  *string `json:"name"`
+	Email *string `json:"email"`
+	Batch *string `json:"batch"`
 }

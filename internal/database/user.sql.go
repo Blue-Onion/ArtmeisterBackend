@@ -186,6 +186,63 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	return i, err
 }
 
+const patchUserAdmin = `-- name: PatchUserAdmin :one
+UPDATE users
+SET
+    status = COALESCE($2, status),
+    role = COALESCE($3, role),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    image,
+    banner_image,
+    created_at,
+    updated_at
+`
+
+type PatchUserAdminParams struct {
+	ID     uuid.UUID
+	Status AccountStatus
+	Role   UserRole
+}
+
+type PatchUserAdminRow struct {
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	Batch       string
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (q *Queries) PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) (PatchUserAdminRow, error) {
+	row := q.db.QueryRowContext(ctx, patchUserAdmin, arg.ID, arg.Status, arg.Role)
+	var i PatchUserAdminRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Batch,
+		&i.Status,
+		&i.Role,
+		&i.Image,
+		&i.BannerImage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const patchUserImages = `-- name: PatchUserImages :one
 UPDATE users
 SET
@@ -256,11 +313,11 @@ func (q *Queries) PatchUserPassword(ctx context.Context, arg PatchUserPasswordPa
 const patchUserProfile = `-- name: PatchUserProfile :one
 UPDATE users
 SET
-    name = COALESCE($2, name),
-    email = COALESCE($3, email),
-    batch = COALESCE($4, batch),
+    name = COALESCE($1::text, name),
+    email = COALESCE($2::text, email),
+    batch = COALESCE($3::text, batch),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $4
 RETURNING
     id,
     name,
@@ -275,10 +332,10 @@ RETURNING
 `
 
 type PatchUserProfileParams struct {
+	Name  sql.NullString
+	Email sql.NullString
+	Batch sql.NullString
 	ID    uuid.UUID
-	Name  string
-	Email string
-	Batch string
 }
 
 type PatchUserProfileRow struct {
@@ -296,10 +353,10 @@ type PatchUserProfileRow struct {
 
 func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error) {
 	row := q.db.QueryRowContext(ctx, patchUserProfile,
-		arg.ID,
 		arg.Name,
 		arg.Email,
 		arg.Batch,
+		arg.ID,
 	)
 	var i PatchUserProfileRow
 	err := row.Scan(
