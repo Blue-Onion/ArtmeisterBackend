@@ -128,12 +128,13 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := h.Repo.CreateUser(r.Context(), database.CreateUserParams{
-		Name:     param.Name,
-		Email:    param.Email,
-		Password: hashPass,
-		Batch:    param.Batch,
-		Status:   database.AccountStatusPending,
-		Role:     database.UserRoleUser,
+		Name:        param.Name,
+		Email:       param.Email,
+		Password:    hashPass,
+		Batch:       param.Batch,
+		Description: toNilStr(&param.Description),
+		Status:      database.AccountStatusPending,
+		Role:        database.UserRoleUser,
 	})
 	if err != nil {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
@@ -166,10 +167,11 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 		return
 	}
 	params := database.PatchUserProfileParams{
-		ID:    userId,
-		Name:  toNilStr(req.Name),
-		Email: toNilStr(req.Email),
-		Batch: toNilStr(req.Batch),
+		ID:          userId,
+		Name:        toNilStr(req.Name),
+		Email:       toNilStr(req.Email),
+		Batch:       toNilStr(req.Batch),
+		Description: toNilStr(req.Desc),
 	}
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
 	if err != nil {

@@ -15,10 +15,11 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 type CreateUser struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Batch    string `json:"batch"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Description string `json:"description"`
+	Batch       string `json:"batch"`
 }
 type AuthenticateUser struct {
 	Email    string `json:"email"`
@@ -28,6 +29,7 @@ type PatchUserProfileRequest struct {
 	Name  *string `json:"name"`
 	Email *string `json:"email"`
 	Batch *string `json:"batch"`
+	Desc  *string `json:"description"`
 }
 type PatchUserPassword struct {
 	OldPassword string `json:"old_password"`

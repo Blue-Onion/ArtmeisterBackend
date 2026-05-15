@@ -51,7 +51,7 @@ func main() {
 	router.Get("/", handler.MainPage)
 
 	// User Routes
-	userRoute := user.UserMethod(userHandler, middlewareHandler)
+	userRoute := user.UserRouter(userHandler, middlewareHandler)
 	router.Mount("/api", userRoute)
 
 	server := http.Server{

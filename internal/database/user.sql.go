@@ -22,9 +22,10 @@ INSERT INTO users (
     status,
     role,
     image,
-    banner_image
+    banner_image,
+    description
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING 
     id,
     name,
@@ -34,6 +35,7 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 `
@@ -47,6 +49,7 @@ type CreateUserParams struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 }
 
 type CreateUserRow struct {
@@ -58,6 +61,7 @@ type CreateUserRow struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -72,6 +76,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.Role,
 		arg.Image,
 		arg.BannerImage,
+		arg.Description,
 	)
 	var i CreateUserRow
 	err := row.Scan(
@@ -83,6 +88,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Role,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -99,6 +105,7 @@ SELECT
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 FROM users
@@ -114,6 +121,7 @@ type GetUserRow struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -130,6 +138,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.Role,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -147,6 +156,7 @@ SELECT
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 FROM users
@@ -163,6 +173,7 @@ type GetUserByEmailRow struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -180,6 +191,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Role,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -202,6 +214,7 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 `
@@ -221,6 +234,7 @@ type PatchUserAdminRow struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -237,6 +251,7 @@ func (q *Queries) PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) 
 		&i.Role,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -254,6 +269,7 @@ RETURNING
     id,
     image,
     banner_image,
+    description,
     updated_at
 `
 
@@ -267,6 +283,7 @@ type PatchUserImagesRow struct {
 	ID          uuid.UUID
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	UpdatedAt   time.Time
 }
 
@@ -277,6 +294,7 @@ func (q *Queries) PatchUserImages(ctx context.Context, arg PatchUserImagesParams
 		&i.ID,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -316,8 +334,9 @@ SET
     name = COALESCE($1::text, name),
     email = COALESCE($2::text, email),
     batch = COALESCE($3::text, batch),
+    description = COALESCE($4::text, description),
     updated_at = NOW()
-WHERE id = $4
+WHERE id = $5
 RETURNING
     id,
     name,
@@ -327,15 +346,17 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 `
 
 type PatchUserProfileParams struct {
-	Name  sql.NullString
-	Email sql.NullString
-	Batch sql.NullString
-	ID    uuid.UUID
+	Name        sql.NullString
+	Email       sql.NullString
+	Batch       sql.NullString
+	Description sql.NullString
+	ID          uuid.UUID
 }
 
 type PatchUserProfileRow struct {
@@ -347,6 +368,7 @@ type PatchUserProfileRow struct {
 	Role        UserRole
 	Image       sql.NullString
 	BannerImage sql.NullString
+	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -356,6 +378,7 @@ func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfilePara
 		arg.Name,
 		arg.Email,
 		arg.Batch,
+		arg.Description,
 		arg.ID,
 	)
 	var i PatchUserProfileRow
@@ -368,6 +391,7 @@ func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfilePara
 		&i.Role,
 		&i.Image,
 		&i.BannerImage,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

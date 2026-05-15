@@ -7,19 +7,19 @@ import (
 	"github.com/go-chi/chi"
 )
 
-func UserMethod(userHandler *Handler, middlewareHandler *middleware.Handler) *chi.Mux {
+func UserRouter(userHandler *Handler, middlewareHandler *middleware.Handler) *chi.Mux {
+	r := chi.NewRouter()
 
-	userRoute := chi.NewRouter()
+	// Public routes
+	r.Post("/users", userHandler.HandleCreateUser)
+	r.Post("/login", userHandler.HandleLogin)
 
-	// Auth
-	userRoute.Post("/auth/register", userHandler.HandleCreateUser)
-	userRoute.Post("/auth/login", userHandler.HandleLogin)
-	userRoute.Post("/auth/logout", middlewareHandler.MiddlewareAuth(http.HandlerFunc(userHandler.HandleLogOut)))
+	// Protected routes
+	auth := middlewareHandler.MiddlewareAuth
+	r.Patch("/users/avatar", auth(http.HandlerFunc(userHandler.HandleUpdateImg)))
+	r.Patch("/users/{id}", auth(http.HandlerFunc(userHandler.HandleUpdateUserProfile)))
+	r.Patch("/users/password", auth(http.HandlerFunc(userHandler.HandlePasswordChange)))
+	r.Post("/logout", auth(http.HandlerFunc(userHandler.HandleLogOut)))
 
-	// User profile
-	userRoute.Patch("/users/me", middlewareHandler.MiddlewareAuth(http.HandlerFunc(userHandler.HandleUpdateUserProfile)))
-	userRoute.Patch("/users/me/password", middlewareHandler.MiddlewareAuth(http.HandlerFunc(userHandler.HandlePasswordChange)))
-	userRoute.Patch("/users/me/avatar", middlewareHandler.MiddlewareAuth(http.HandlerFunc(userHandler.HandleUpdateImg)))
-
-	return userRoute
+	return r
 }

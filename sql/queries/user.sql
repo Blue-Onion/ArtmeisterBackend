@@ -7,9 +7,10 @@ INSERT INTO users (
     status,
     role,
     image,
-    banner_image
+    banner_image,
+    description
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING 
     id,
     name,
@@ -19,6 +20,7 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at;
 
@@ -33,6 +35,7 @@ SELECT
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 FROM users
@@ -50,6 +53,7 @@ SELECT
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at
 FROM users
@@ -62,6 +66,7 @@ SET
     name = COALESCE(sqlc.narg('name')::text, name),
     email = COALESCE(sqlc.narg('email')::text, email),
     batch = COALESCE(sqlc.narg('batch')::text, batch),
+    description = COALESCE(sqlc.narg('description')::text, description),
     updated_at = NOW()
 WHERE id = sqlc.arg('id')
 RETURNING
@@ -73,6 +78,7 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at;
 
@@ -93,8 +99,10 @@ RETURNING
     role,
     image,
     banner_image,
+    description,
     created_at,
     updated_at;
+
 
 -- name: PatchUserPassword :one
 UPDATE users
@@ -118,4 +126,5 @@ RETURNING
     id,
     image,
     banner_image,
+    description,
     updated_at;

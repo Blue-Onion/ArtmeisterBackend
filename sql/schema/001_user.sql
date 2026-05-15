@@ -9,7 +9,7 @@ CREATE TABLE users (
     name TEXT NOT NULL,
     password TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-
+    description TEXT DEFAULT '',
     banner_image TEXT DEFAULT '',
     image TEXT DEFAULT '',
     batch TEXT NOT NULL, 

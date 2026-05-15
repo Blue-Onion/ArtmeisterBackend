@@ -104,6 +104,7 @@ type User struct {
 	Name        string
 	Password    string
 	Email       string
+	Description sql.NullString
 	BannerImage sql.NullString
 	Image       sql.NullString
 	Batch       string
