@@ -152,3 +152,42 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	handler.RespondWithJson(w, 200, "Art Work Deleted")
 
 }
+func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusNonAuthoritativeInfo, "Not Authorized")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		return
+	}
+	artId, err := uuid.Parse(id)
+
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	name := r.FormValue("name")
+	if len(name) < 3 {
+		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
+		return
+	}
+	desc := r.FormValue("description")
+	tags := r.MultipartForm.Value["tags"]
+
+	params := database.UpdateArtParams{
+		ID:          artId,
+		UserID:      user.ID,
+		Name:        name,
+		Tags:        tags,
+		Description: utlis.ToNilStr(&desc),
+	}
+	updatedWork, err := h.Repo.UpdateArt(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 400, updatedWork)
+}

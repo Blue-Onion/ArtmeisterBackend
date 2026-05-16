@@ -42,10 +42,9 @@ UPDATE art
 SET
     name        = COALESCE($2, name),
     description = COALESCE($3, description),
-    image       = COALESCE($4, image),
-    tags        = COALESCE($5, tags),
+    tags        = COALESCE($4, tags),
     updated_at  = NOW()
-WHERE id = $1 AND user_id = $6
+WHERE id = $1 AND user_id = $5
 RETURNING *;
 
 

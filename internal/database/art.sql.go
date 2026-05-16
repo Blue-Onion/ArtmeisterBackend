@@ -259,10 +259,9 @@ UPDATE art
 SET
     name        = COALESCE($2, name),
     description = COALESCE($3, description),
-    image       = COALESCE($4, image),
-    tags        = COALESCE($5, tags),
+    tags        = COALESCE($4, tags),
     updated_at  = NOW()
-WHERE id = $1 AND user_id = $6
+WHERE id = $1 AND user_id = $5
 RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
 `
 
@@ -270,7 +269,6 @@ type UpdateArtParams struct {
 	ID          uuid.UUID
 	Name        string
 	Description sql.NullString
-	Image       string
 	Tags        []string
 	UserID      uuid.UUID
 }
@@ -280,7 +278,6 @@ func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, erro
 		arg.ID,
 		arg.Name,
 		arg.Description,
-		arg.Image,
 		pq.Array(arg.Tags),
 		arg.UserID,
 	)
