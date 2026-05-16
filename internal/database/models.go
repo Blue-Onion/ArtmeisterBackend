@@ -56,6 +56,49 @@ func (ns NullAccountStatus) Value() (driver.Value, error) {
 	return string(ns.AccountStatus), nil
 }
 
+type ArtStatus string
+
+const (
+	ArtStatusPending  ArtStatus = "pending"
+	ArtStatusApproved ArtStatus = "approved"
+	ArtStatusRejected ArtStatus = "rejected"
+)
+
+func (e *ArtStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ArtStatus(s)
+	case string:
+		*e = ArtStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ArtStatus: %T", src)
+	}
+	return nil
+}
+
+type NullArtStatus struct {
+	ArtStatus ArtStatus
+	Valid     bool // Valid is true if ArtStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullArtStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ArtStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ArtStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullArtStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ArtStatus), nil
+}
+
 type UserRole string
 
 const (
@@ -104,6 +147,8 @@ type Art struct {
 	Name        string
 	Description sql.NullString
 	Image       sql.NullString
+	Tags        []string
+	Status      ArtStatus
 	UserID      uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
