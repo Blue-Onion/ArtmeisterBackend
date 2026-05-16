@@ -1,13 +1,17 @@
 package art
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
+	"github.com/go-chi/chi"
 	"github.com/google/uuid"
-	"net/http"
 )
 
 type Handler struct {
@@ -63,4 +67,42 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	handler.RespondWithJson(w, 200, art)
+}
+func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
+
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		return
+	}
+	artId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	param := database.DeleteArtParams{
+		ID:     artId,
+		UserID: user.ID,
+	}
+	err = h.Repo.DeleteArt(r.Context(), param)
+	if err != nil {
+
+		if errors.Is(err, sql.ErrNoRows) {
+
+			handler.RespondWithError(w, 404, "Art not found")
+
+			return
+
+		}
+
+		handler.RespondWithError(w, 500, "Something went wrong")
+		return
+	}
+	handler.RespondWithJson(w, 200, "Art Work Deleted")
+
 }
