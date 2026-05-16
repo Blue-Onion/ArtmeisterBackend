@@ -68,12 +68,19 @@ func (q *Queries) DeleteArt(ctx context.Context, arg DeleteArtParams) error {
 }
 
 const getArtByID = `-- name: GetArtByID :one
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT id, name, description, image, tags, status, user_id, created_at, updated_at
+FROM art
 WHERE id = $1
+  AND user_id = $2
 `
 
-func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (Art, error) {
-	row := q.db.QueryRowContext(ctx, getArtByID, id)
+type GetArtByIDParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) GetArtByID(ctx context.Context, arg GetArtByIDParams) (Art, error) {
+	row := q.db.QueryRowContext(ctx, getArtByID, arg.ID, arg.UserID)
 	var i Art
 	err := row.Scan(
 		&i.ID,

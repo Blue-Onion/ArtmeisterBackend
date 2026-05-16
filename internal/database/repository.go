@@ -15,7 +15,7 @@ type UserRepository interface {
 }
 type ArtRepository interface {
 	DeleteArt(ctx context.Context, arg DeleteArtParams) error
-	GetArtByID(ctx context.Context, id uuid.UUID) (Art, error)
+	GetArtByID(ctx context.Context, arg GetArtByIDParams) (Art, error)
 	GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, error)
 	ListArt(ctx context.Context) ([]Art, error)
 	ListArtByTag(ctx context.Context, tags []string) ([]Art, error)

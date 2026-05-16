@@ -5,8 +5,10 @@ RETURNING *;
 
 
 -- name: GetArtByID :one
-SELECT * FROM art
-WHERE id = $1;
+SELECT *
+FROM art
+WHERE id = $1
+  AND user_id = $2;
 
 
 -- name: GetArtByUser :many
