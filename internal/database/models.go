@@ -99,6 +99,16 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type Art struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       sql.NullString
+	UserID      uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type User struct {
 	ID          uuid.UUID
 	Name        string
