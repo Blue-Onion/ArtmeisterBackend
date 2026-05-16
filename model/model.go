@@ -35,3 +35,9 @@ type PatchUserPassword struct {
 	OldPassword string `json:"old_password"`
 	Password    string `json:"password"`
 }
+type CreateArtReq struct {
+	Name        string `json:"name"`
+	Description string `json:"description "`
+	Image       string `json:"image"`
+	Tags        string `json:"tags"`
+}

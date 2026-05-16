@@ -31,31 +31,19 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
-	file, fileHeader, err := r.FormFile("image")
+	file, _, err := r.FormFile("image")
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
 		return
 	}
 	defer file.Close()
 	path := fmt.Sprintf("uploads/%s", user.ID.String())
-	filepath, err := utlis.SaveLocal(file, fileHeader, path)
+	filepath, err := utlis.SaveLocal(file, "userPhoto", path)
 	if err != nil {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, filepath)
-}
-
-func toNilStr(str *string) sql.NullString {
-	if str == nil {
-		return sql.NullString{
-			Valid: false,
-		}
-	}
-	return sql.NullString{
-		String: *str,
-		Valid:  true,
-	}
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +120,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Email:       param.Email,
 		Password:    hashPass,
 		Batch:       param.Batch,
-		Description: toNilStr(&param.Description),
+		Description: utlis.ToNilStr(&param.Description),
 		Status:      database.AccountStatusPending,
 		Role:        database.UserRoleUser,
 	})
@@ -168,10 +156,10 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	}
 	params := database.PatchUserProfileParams{
 		ID:          userId,
-		Name:        toNilStr(req.Name),
-		Email:       toNilStr(req.Email),
-		Batch:       toNilStr(req.Batch),
-		Description: toNilStr(req.Desc),
+		Name:        utlis.ToNilStr(req.Name),
+		Email:       utlis.ToNilStr(req.Email),
+		Batch:       utlis.ToNilStr(req.Batch),
+		Description: utlis.ToNilStr(req.Desc),
 	}
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
 	if err != nil {
@@ -198,27 +186,27 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 	}
 	hasUpdate := false
 
-	userfile, userfileHeader, err := r.FormFile("user_image")
+	userfile, _, err := r.FormFile("user_image")
 	if err == nil && userfile != nil {
 		defer userfile.Close()
-		userImageFilePath, saveErr := utlis.SaveLocal(userfile, userfileHeader, path)
+		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "user", path)
 		if saveErr != nil {
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save profile image")
 			return
 		}
-		params.Image = toNilStr(&userImageFilePath)
+		params.Image = utlis.ToNilStr(&userImageFilePath)
 		hasUpdate = true
 	}
 
-	bannerFile, bannerFileHeader, err := r.FormFile("banner_image")
+	bannerFile, _, err := r.FormFile("banner_image")
 	if err == nil && bannerFile != nil {
 		defer bannerFile.Close()
-		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, bannerFileHeader, path)
+		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
 		if saveErr != nil {
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
 			return
 		}
-		params.BannerImage = toNilStr(&bannerImageFilePath)
+		params.BannerImage = utlis.ToNilStr(&bannerImageFilePath)
 		hasUpdate = true
 	}
 

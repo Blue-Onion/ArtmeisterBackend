@@ -1,11 +1,11 @@
 -- +goose Up
 CREATE TYPE public.art_status AS ENUM ('pending', 'approved', 'rejected');
 
-CREATE TABLE art(
-    id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE art (
+    id           uuid PRIMARY KEY,
     name         TEXT NOT NULL,
-    description  TEXT DEFAULT '',
-    image        TEXT DEFAULT '',
+    description  TEXT,
+    image        TEXT NOT NULL,
     tags         TEXT[] NOT NULL DEFAULT '{}',
     status       public.art_status NOT NULL DEFAULT 'pending',
     user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

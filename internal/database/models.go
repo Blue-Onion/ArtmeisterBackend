@@ -146,7 +146,7 @@ type Art struct {
 	ID          uuid.UUID
 	Name        string
 	Description sql.NullString
-	Image       sql.NullString
+	Image       string
 	Tags        []string
 	Status      ArtStatus
 	UserID      uuid.UUID

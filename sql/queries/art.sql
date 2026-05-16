@@ -1,6 +1,6 @@
 -- name: CreateArt :one
-INSERT INTO art (name, description, image, tags, user_id)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO art (id, name, description, image, tags, user_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 

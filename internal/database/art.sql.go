@@ -14,21 +14,23 @@ import (
 )
 
 const createArt = `-- name: CreateArt :one
-INSERT INTO art (name, description, image, tags, user_id)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO art (id, name, description, image, tags, user_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
 `
 
 type CreateArtParams struct {
+	ID          uuid.UUID
 	Name        string
 	Description sql.NullString
-	Image       sql.NullString
+	Image       string
 	Tags        []string
 	UserID      uuid.UUID
 }
 
 func (q *Queries) CreateArt(ctx context.Context, arg CreateArtParams) (Art, error) {
 	row := q.db.QueryRowContext(ctx, createArt,
+		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.Image,
@@ -261,7 +263,7 @@ type UpdateArtParams struct {
 	ID          uuid.UUID
 	Name        string
 	Description sql.NullString
-	Image       sql.NullString
+	Image       string
 	Tags        []string
 	UserID      uuid.UUID
 }

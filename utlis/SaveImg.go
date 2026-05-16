@@ -20,7 +20,7 @@ func isPath(path string) bool {
 	return false
 
 }
-func SaveLocal(file multipart.File, fileHeader *multipart.FileHeader, path string) (string, error) {
+func SaveLocal(file multipart.File, fileName string, path string) (string, error) {
 	is := isPath(path)
 	if !is {
 		err := os.MkdirAll(path, os.ModePerm)
@@ -28,7 +28,7 @@ func SaveLocal(file multipart.File, fileHeader *multipart.FileHeader, path strin
 			return "", err
 		}
 	}
-	filePath := fmt.Sprintf("%s/%s", path, fileHeader.Filename)
+	filePath := fmt.Sprintf("%s/%s.png", path, fileName)
 	dst, err := os.Create(filePath)
 	if err != nil {
 		return "", err
