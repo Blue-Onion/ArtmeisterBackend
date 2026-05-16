@@ -11,6 +11,7 @@ import (
 
 	"github.com/Blue-Onion/ArtmeisterBackend/config"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 
@@ -35,6 +36,9 @@ func main() {
 	middlewareHandler := &middleware.Handler{
 		Repo: apiCfg.UserRepo,
 	}
+	artHanlder := &art.Handler{
+		Repo: apiCfg.ArtRepo,
+	}
 
 	//Server
 	router := chi.NewRouter()
@@ -52,7 +56,10 @@ func main() {
 
 	// User Routes
 	userRoute := user.UserRouter(userHandler, middlewareHandler)
-	router.Mount("/api", userRoute)
+	router.Mount("/auth", userRoute)
+	// Art Routes
+	artRoute := art.ArtRouter(artHanlder, middlewareHandler)
+	router.Mount("/art", artRoute)
 
 	server := http.Server{
 		Handler: router,

@@ -13,3 +13,12 @@ type UserRepository interface {
 	PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error)
 	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error)
 }
+type ArtRepository interface {
+	DeleteArt(ctx context.Context, arg DeleteArtParams) error
+	GetArtByID(ctx context.Context, id uuid.UUID) (Art, error)
+	GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, error)
+	ListArt(ctx context.Context) ([]Art, error)
+	ListArtByTag(ctx context.Context, tags []string) ([]Art, error)
+	ListArtByTags(ctx context.Context, dollar_1 []string) ([]Art, error)
+	UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, error)
+}

@@ -20,6 +20,7 @@ type Config struct {
 }
 type ApiConfig struct {
 	UserRepo database.UserRepository
+	ArtRepo  database.ArtRepository
 }
 
 var (
@@ -69,7 +70,6 @@ func loadConfig() *Config {
 		DbUrl:     dbUrl,
 		Port:      Port,
 		JWTSecert: Jwt,
-
 	}
 
 }
@@ -85,5 +85,6 @@ func DbQuries() (*ApiConfig, error) {
 		return nil, errors.New("Connection Failed")
 	}
 	apiConfig.UserRepo = query
+	apiConfig.ArtRepo = query
 	return apiConfig, nil
 }
