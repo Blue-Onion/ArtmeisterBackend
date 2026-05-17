@@ -35,3 +35,7 @@ type PatchUserPassword struct {
 	OldPassword string `json:"old_password"`
 	Password    string `json:"password"`
 }
+type PatchUserStatus struct {
+	Role   string `json:"role"`
+	Status string `json:"status"`
+}

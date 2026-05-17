@@ -71,16 +71,10 @@ const getArtByID = `-- name: GetArtByID :one
 SELECT id, name, description, image, tags, status, user_id, created_at, updated_at
 FROM art
 WHERE id = $1
-  AND user_id = $2
 `
 
-type GetArtByIDParams struct {
-	ID     uuid.UUID
-	UserID uuid.UUID
-}
-
-func (q *Queries) GetArtByID(ctx context.Context, arg GetArtByIDParams) (Art, error) {
-	row := q.db.QueryRowContext(ctx, getArtByID, arg.ID, arg.UserID)
+func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (Art, error) {
+	row := q.db.QueryRowContext(ctx, getArtByID, id)
 	var i Art
 	err := row.Scan(
 		&i.ID,
@@ -223,6 +217,45 @@ ORDER BY created_at DESC
 
 func (q *Queries) ListArtByTags(ctx context.Context, dollar_1 []string) ([]Art, error) {
 	rows, err := q.db.QueryContext(ctx, listArtByTags, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Art
+	for rows.Next() {
+		var i Art
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Image,
+			pq.Array(&i.Tags),
+			&i.Status,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingArt = `-- name: ListPendingArt :many
+SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+WHERE status = 'pending'
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPendingArt(ctx context.Context) ([]Art, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingArt)
 	if err != nil {
 		return nil, err
 	}

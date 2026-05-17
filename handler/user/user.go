@@ -162,10 +162,18 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 		Description: utlis.ToNilStr(req.Desc),
 	}
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
+
 	if err != nil {
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update profile")
+
+		if errors.Is(err, sql.ErrNoRows) {
+
+			handler.RespondWithError(w, 404, "Art not found")
+			return
+		}
+		handler.RespondWithError(w, 500, "Something went wrong")
 		return
 	}
+
 	handler.RespondWithJson(w, http.StatusOK, updatedUser)
 }
 

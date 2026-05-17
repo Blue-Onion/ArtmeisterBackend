@@ -87,16 +87,6 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	handler.RespondWithJson(w, 200, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
-	user_Id := chi.URLParam(r, "user_id")
-	if user_Id == "" {
-		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
-		return
-	}
-	userId, err := uuid.Parse(user_Id)
-	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
-		return
-	}
 	Id := chi.URLParam(r, "id")
 	if Id == "" {
 		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
@@ -107,16 +97,12 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	params := database.GetArtByIDParams{
-		ID:     artId,
-		UserID: userId,
-	}
-	arts, err := h.Repo.GetArtByID(r.Context(), params)
+	art, err := h.Repo.GetArtByID(r.Context(), artId)
 	if err != nil {
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, arts)
+	handler.RespondWithJson(w, 200, art)
 }
 func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -153,6 +139,7 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 
 }
 func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
+
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
 		handler.RespondWithError(w, http.StatusNonAuthoritativeInfo, "Not Authorized")
@@ -185,9 +172,17 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		Description: utlis.ToNilStr(&desc),
 	}
 	updatedWork, err := h.Repo.UpdateArt(r.Context(), params)
+
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+
+		if errors.Is(err, sql.ErrNoRows) {
+
+			handler.RespondWithError(w, 404, "Art not found")
+			return
+		}
+		handler.RespondWithError(w, 500, "Something went wrong")
 		return
 	}
+
 	handler.RespondWithJson(w, 400, updatedWork)
 }

@@ -11,11 +11,12 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	PatchUserImages(ctx context.Context, arg PatchUserImagesParams) (PatchUserImagesRow, error)
 	PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error)
+	PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) (PatchUserAdminRow, error)
 	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error)
 }
 type ArtRepository interface {
 	DeleteArt(ctx context.Context, arg DeleteArtParams) error
-	GetArtByID(ctx context.Context, arg GetArtByIDParams) (Art, error)
+	GetArtByID(ctx context.Context, id uuid.UUID) (Art, error)
 	GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, error)
 	ListArt(ctx context.Context) ([]Art, error)
 	ListArtByTag(ctx context.Context, tags []string) ([]Art, error)

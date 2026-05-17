@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
@@ -11,31 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type Handler struct {
-	Repo database.UserRepository
-}
+const admin contextKey = "admin"
 
-type contextKey string
-
-const userContextKey contextKey = "user"
-
-type User struct {
-	ID          uuid.UUID
-	Name        string
-	Email       string
-	Batch       string
-	Status      database.AccountStatus
-	Role        database.UserRole
-	Image       sql.NullString
-	BannerImage sql.NullString
-}
-
-func GetUser(ctx context.Context) (User, bool) {
-	user, ok := ctx.Value(userContextKey).(User)
+func GetAdmin(ctx context.Context) (User, bool) {
+	user, ok := ctx.Value(admin).(User)
 	return user, ok
 }
 
-func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
+func (h Handler) MiddlewareAdminAuth(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenCookie, err := r.Cookie("authToken")
 		if err != nil {
@@ -60,7 +42,10 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
 			return
 		}
-
+		if dbUser.Role != database.UserRoleAdmin {
+			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized:Admin not Found")
+			return
+		}
 		user := User{
 			ID:          dbUser.ID,
 			Name:        dbUser.Name,
@@ -71,7 +56,7 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 			Image:       dbUser.Image,
 			BannerImage: dbUser.BannerImage,
 		}
-		ctx := context.WithValue(r.Context(), userContextKey, user)
+		ctx := context.WithValue(r.Context(), admin, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
