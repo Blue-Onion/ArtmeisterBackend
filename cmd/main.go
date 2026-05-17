@@ -13,6 +13,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/admin"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 
 	"github.com/go-chi/chi"
@@ -60,6 +61,9 @@ func main() {
 	// Art Routes
 	artRoute := art.ArtRouter(artHanlder, middlewareHandler)
 	router.Mount("/art", artRoute)
+	// Admin Routes
+	adminRoute := admin.AdminRoute(userHandler, artHanlder, middlewareHandler)
+	router.Mount("/admin", adminRoute)
 
 	server := http.Server{
 		Handler: router,
