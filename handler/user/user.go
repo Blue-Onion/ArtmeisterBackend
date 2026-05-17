@@ -166,11 +166,10 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	if err != nil {
 
 		if errors.Is(err, sql.ErrNoRows) {
-
-			handler.RespondWithError(w, 404, "Art not found")
+			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
 			return
 		}
-		handler.RespondWithError(w, 500, "Something went wrong")
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update user profile")
 		return
 	}
 

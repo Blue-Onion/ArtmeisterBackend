@@ -66,43 +66,43 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, art)
+	handler.RespondWithJson(w, http.StatusOK, art)
 }
 func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "user_id")
 	if userId == "" {
-		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
 	id, err := uuid.Parse(userId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, arts)
+	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	Id := chi.URLParam(r, "id")
 	if Id == "" {
-		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(Id)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	art, err := h.Repo.GetArtByID(r.Context(), artId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, art)
+	handler.RespondWithJson(w, http.StatusOK, art)
 }
 func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -112,12 +112,12 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	}
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(id)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	param := database.DeleteArtParams{
@@ -129,13 +129,13 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 
 		if errors.Is(err, sql.ErrNoRows) {
 
-			handler.RespondWithError(w, 404, "Art not found")
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
-		handler.RespondWithError(w, 500, "Something went wrong")
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete art")
 		return
 	}
-	handler.RespondWithJson(w, 200, "Art Work Deleted")
+	handler.RespondWithJson(w, http.StatusOK, "Art Work Deleted")
 
 }
 func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
@@ -147,13 +147,13 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 	}
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		handler.RespondWithError(w, 400, "Sahi Id bhej Bhawde")
+		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(id)
 
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	name := r.FormValue("name")
@@ -177,12 +177,12 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 
 		if errors.Is(err, sql.ErrNoRows) {
 
-			handler.RespondWithError(w, 404, "Art not found")
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
-		handler.RespondWithError(w, 500, "Something went wrong")
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update art")
 		return
 	}
 
-	handler.RespondWithJson(w, 400, updatedWork)
+	handler.RespondWithJson(w, http.StatusOK, updatedWork)
 }

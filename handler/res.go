@@ -11,7 +11,7 @@ func RespondWithJson(w http.ResponseWriter, code int, payload interface{}) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		log.Println("Failed to parse Json")
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Add("Content-type", "Application/Json")
@@ -35,7 +35,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	response := res{
 		Health: "ok",
 	}
-	RespondWithJson(w, 200, response)
+	RespondWithJson(w, http.StatusOK, response)
 }
 func RespondWithHTML(w http.ResponseWriter, code int, payload string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -45,8 +45,8 @@ func RespondWithHTML(w http.ResponseWriter, code int, payload string) {
 func MainPage(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("template/index.html")
 	if err != nil {
-		RespondWithError(w, 500, "Could not read template")
+		RespondWithError(w, http.StatusInternalServerError, "Could not read template")
 		return
 	}
-	RespondWithHTML(w, 200, string(content))
+	RespondWithHTML(w, http.StatusOK, string(content))
 }
