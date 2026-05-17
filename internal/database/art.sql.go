@@ -328,3 +328,34 @@ func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, erro
 	)
 	return i, err
 }
+
+const updateArtStatus = `-- name: UpdateArtStatus :one
+UPDATE art
+SET
+    status = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
+`
+
+type UpdateArtStatusParams struct {
+	ID     uuid.UUID
+	Status ArtStatus
+}
+
+func (q *Queries) UpdateArtStatus(ctx context.Context, arg UpdateArtStatusParams) (Art, error) {
+	row := q.db.QueryRowContext(ctx, updateArtStatus, arg.ID, arg.Status)
+	var i Art
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Image,
+		pq.Array(&i.Tags),
+		&i.Status,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

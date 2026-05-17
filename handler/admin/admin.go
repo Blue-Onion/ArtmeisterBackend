@@ -14,6 +14,9 @@ import (
 type UserHandler struct {
 	Repo database.UserRepository
 }
+type ArtHandler struct {
+	Repo database.ArtRepository
+}
 
 func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "id")
@@ -48,4 +51,24 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 	}
 	user, err := h.Repo.PatchUserAdmin(r.Context(), params)
 	handler.RespondWithJson(w, 200, user)
+}
+func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
+	artId := chi.URLParam(r, "art_id")
+	id, err := uuid.Parse(artId)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	status := r.URL.Query().Get("status")
+	if status != string(database.ArtStatusApproved) && status != string(database.AccountStatusBanned) && status != string(database.AccountStatusPending) {
+
+		handler.RespondWithError(w, 400, "Ehhh Wrong Status")
+		return
+	}
+	params := database.UpdateArtStatusParams{
+		ID:     id,
+		Status: database.ArtStatus(status),
+	}
+	art, err := h.Repo.UpdateArtStatus(r.Context(), params)
+	handler.RespondWithJson(w, 200, art)
 }

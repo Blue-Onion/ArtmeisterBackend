@@ -22,5 +22,6 @@ type ArtRepository interface {
 	ListArtByTag(ctx context.Context, tags []string) ([]Art, error)
 	ListArtByTags(ctx context.Context, dollar_1 []string) ([]Art, error)
 	UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, error)
+	UpdateArtStatus(ctx context.Context, arg UpdateArtStatusParams) (Art, error)
 	CreateArt(ctx context.Context, arg CreateArtParams) (Art, error)
 }

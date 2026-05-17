@@ -50,6 +50,13 @@ SET
 WHERE id = $1 AND user_id = $5
 RETURNING *;
 
+-- name: UpdateArtStatus :one
+UPDATE art
+SET
+    status = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 -- name: DeleteArt :exec
 DELETE FROM art
