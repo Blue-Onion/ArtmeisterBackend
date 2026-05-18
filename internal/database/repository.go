@@ -25,3 +25,19 @@ type ArtRepository interface {
 	UpdateArtStatus(ctx context.Context, arg UpdateArtStatusParams) (Art, error)
 	CreateArt(ctx context.Context, arg CreateArtParams) (Art, error)
 }
+
+type EventRepository interface {
+	CreateEvent(ctx context.Context, arg CreateEventParams) (Event, error)
+
+	DeleteEvent(ctx context.Context, id uuid.UUID) error
+
+	GetEventByID(ctx context.Context, id uuid.UUID) (Event, error)
+
+	ListEvents(ctx context.Context) ([]Event, error)
+
+	ListEventsByMode(ctx context.Context, status ModeOfConduct) ([]Event, error)
+
+	ListUpcomingEvents(ctx context.Context) ([]Event, error)
+
+	UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error)
+}

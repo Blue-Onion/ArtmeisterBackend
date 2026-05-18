@@ -39,3 +39,12 @@ type PatchUserStatus struct {
 	Role   string `json:"role"`
 	Status string `json:"status"`
 }
+type CreateEvent struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Venue       string `json:"venue"`
+	Image       string `json:"image"`
+	BannerImage string `json:"banner_image"`
+	EventDate   string `json:"event_date"`
+	Status      string `json:"status"`
+}
