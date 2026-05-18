@@ -105,3 +105,25 @@ func (h *Handler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, "ok")
 }
+func (h *Handler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	eventId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, "Invalid Id")
+		return
+	}
+	res, err := h.Repo.GetEventByID(r.Context(), eventId)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
+}
+func (h *Handler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
+	res, err := h.Repo.ListEvents(r.Context())
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
+}
