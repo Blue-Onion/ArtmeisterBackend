@@ -14,6 +14,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type Handler struct {
@@ -115,6 +116,10 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
+	var socialLinks json.RawMessage
+	if param.Social != nil {
+		socialLinks = *param.Social
+	}
 	user, err := h.Repo.CreateUser(r.Context(), database.CreateUserParams{
 		Name:        param.Name,
 		Email:       param.Email,
@@ -123,6 +128,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Description: utlis.ToNilStr(&param.Description),
 		Status:      database.AccountStatusPending,
 		Role:        database.UserRoleUser,
+		Column10:    socialLinks,
 	})
 	if err != nil {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
@@ -160,6 +166,12 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 		Email:       utlis.ToNilStr(req.Email),
 		Batch:       utlis.ToNilStr(req.Batch),
 		Description: utlis.ToNilStr(req.Desc),
+	}
+	if req.Social != nil {
+		params.SocialLinks = pqtype.NullRawMessage{
+			RawMessage: *req.Social,
+			Valid:      true,
+		}
 	}
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
 

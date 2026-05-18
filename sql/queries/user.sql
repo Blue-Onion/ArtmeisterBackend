@@ -1,3 +1,4 @@
+-- name: CreateUser :one
 INSERT INTO users (
     name,
     email,
@@ -12,7 +13,7 @@ INSERT INTO users (
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
-    COALESCE($10, '{}'::jsonb)
+    COALESCE($10::jsonb, '{}'::jsonb)
 )
 RETURNING 
     id,
@@ -27,7 +28,6 @@ RETURNING
     social_links,
     created_at,
     updated_at;
-
 
 -- name: GetUser :one
 SELECT 

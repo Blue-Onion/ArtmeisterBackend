@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,21 +16,23 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 type CreateUser struct {
-	Name        string `json:"name"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	Description string `json:"description"`
-	Batch       string `json:"batch"`
+	Name        string           `json:"name"`
+	Email       string           `json:"email"`
+	Password    string           `json:"password"`
+	Description string           `json:"description"`
+	Batch       string           `json:"batch"`
+	Social      *json.RawMessage `json:"social"`
 }
 type AuthenticateUser struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 type PatchUserProfileRequest struct {
-	Name  *string `json:"name"`
-	Email *string `json:"email"`
-	Batch *string `json:"batch"`
-	Desc  *string `json:"description"`
+	Name   *string          `json:"name"`
+	Email  *string          `json:"email"`
+	Batch  *string          `json:"batch"`
+	Desc   *string          `json:"description"`
+	Social *json.RawMessage `json:"social"`
 }
 type PatchUserPassword struct {
 	OldPassword string `json:"old_password"`

@@ -30,7 +30,7 @@ INSERT INTO users (
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
-    COALESCE($10, '{}'::jsonb)
+    COALESCE($10::jsonb, '{}'::jsonb)
 )
 RETURNING 
     id,
@@ -57,7 +57,7 @@ type CreateUserParams struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
-	Column10    interface{}
+	Column10    json.RawMessage
 }
 
 type CreateUserRow struct {
