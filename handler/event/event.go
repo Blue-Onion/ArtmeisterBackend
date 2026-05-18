@@ -8,6 +8,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
+	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
 
@@ -33,7 +34,6 @@ func (h *Handler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	eventDate, err := time.Parse("2006-01-02", form_date)
 
 	if err != nil {
-
 		handler.RespondWithError(w, 400, "invalid date format (expected YYYY-MM-DD)")
 		return
 	}
@@ -90,4 +90,18 @@ func (h *Handler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
+}
+func (h *Handler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	eventId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, "Invalid Id")
+		return
+	}
+	err = h.Repo.DeleteEvent(r.Context(), eventId)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, "ok")
 }
