@@ -13,6 +13,11 @@ CREATE TABLE art (
     updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX idx_art_user_id ON art(user_id);
+CREATE INDEX idx_art_status ON art(status);
+CREATE INDEX idx_art_created_at ON art(created_at);
+CREATE INDEX idx_art_tags ON art USING GIN(tags);
+
 -- +goose Down
 DROP TABLE IF EXISTS art;
 DROP TYPE IF EXISTS public.art_status;
