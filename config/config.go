@@ -19,8 +19,10 @@ type Config struct {
 	JWTSecert string
 }
 type ApiConfig struct {
-	UserRepo database.UserRepository
-	ArtRepo  database.ArtRepository
+	UserRepo          database.UserRepository
+	ArtRepo           database.ArtRepository
+	EventRepo         database.EventRepository
+	EventAttendeeRepo database.EventAttendeesRepository
 }
 
 var (
@@ -86,5 +88,7 @@ func DbQuries() (*ApiConfig, error) {
 	}
 	apiConfig.UserRepo = query
 	apiConfig.ArtRepo = query
+	apiConfig.EventRepo = query
+	apiConfig.EventAttendeeRepo = query
 	return apiConfig, nil
 }

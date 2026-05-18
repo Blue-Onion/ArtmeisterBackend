@@ -11,9 +11,10 @@ import (
 
 	"github.com/Blue-Onion/ArtmeisterBackend/config"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
-	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
-	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/admin"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/event"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 
 	"github.com/go-chi/chi"
@@ -40,6 +41,12 @@ func main() {
 	artHanlder := &art.Handler{
 		Repo: apiCfg.ArtRepo,
 	}
+	eventHandler := &event.EventHandler{
+		Repo: apiCfg.EventRepo,
+	}
+	eventAttendeeHandler := &event.EventAttendeeHandler{
+		Repo: apiCfg.EventAttendeeRepo,
+	}
 
 	//Server
 	router := chi.NewRouter()
@@ -61,6 +68,9 @@ func main() {
 	// Art Routes
 	artRoute := art.ArtRouter(artHanlder, middlewareHandler)
 	router.Mount("/art", artRoute)
+	// Event Routes
+	eventRoute := event.EventRouter(eventHandler, eventAttendeeHandler, middlewareHandler)
+	router.Mount("/event", eventRoute)
 	// Admin Routes
 	adminRoute := admin.AdminRoute(userHandler, artHanlder, middlewareHandler)
 	router.Mount("/admin", adminRoute)

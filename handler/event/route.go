@@ -7,13 +7,25 @@ import (
 	"github.com/go-chi/chi"
 )
 
-func ArtRouter(md *middleware.Handler) *chi.Mux {
+// EventRouter defines routes for the event package.
+func EventRouter(eventHandler *EventHandler, attendeeHandler *EventAttendeeHandler, middlewareHandler *middleware.Handler) *chi.Mux {
 	r := chi.NewRouter()
-	adminAuth := md.MiddlewareAdminAuth
-	r.Use(
-		func(h http.Handler) http.Handler {
-			return adminAuth(h)
-		},
-	)
+	auth := middlewareHandler.MiddlewareAuth
+	adminAuth := middlewareHandler.MiddlewareAdminAuth
+
+	// Public routes
+	r.Get("/", eventHandler.HandleGetAllEvent)
+	r.Get("/{id}", eventHandler.HandleGetEventById)
+
+	// Protected routes (require user authentication)
+	r.Post("/{id}/join", auth(http.HandlerFunc(attendeeHandler.HandleJoinEvent)))
+	r.Delete("/{id}/attendee", auth(http.HandlerFunc(attendeeHandler.HandleDeleteEventAttendee)))
+	r.Get("/{id}/attendees", auth(http.HandlerFunc(attendeeHandler.HandleAllEventAttendee)))
+
+	// Admin-only routes (require admin authentication)
+	r.Post("/", adminAuth(http.HandlerFunc(eventHandler.HandleCreateEvent)))
+	r.Patch("/{id}", adminAuth(http.HandlerFunc(eventHandler.HandleUpdateEvent)))
+	r.Delete("/{id}", adminAuth(http.HandlerFunc(eventHandler.HandleDeleteEvent)))
+
 	return r
 }
