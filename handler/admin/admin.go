@@ -36,7 +36,7 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 		handler.RespondWithError(w, http.StatusBadRequest, "Role and status cannot both be empty")
 		return
 	}
-	if req.Role != "" && req.Role != string(database.UserRoleModerator) && req.Role != string(database.UserRoleUser) {
+	if req.Role != "" && req.Role != string(database.UserRoleUser) {
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid role provided")
 		return
 	}

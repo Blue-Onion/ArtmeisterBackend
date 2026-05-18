@@ -8,9 +8,13 @@ INSERT INTO users (
     role,
     image,
     banner_image,
-    description
+    description,
+    social_links
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9,
+    COALESCE($10, '{}'::jsonb)
+)
 RETURNING 
     id,
     name,
@@ -21,6 +25,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at;
 
@@ -36,6 +41,7 @@ SELECT
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 FROM users
@@ -54,6 +60,7 @@ SELECT
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 FROM users
@@ -67,6 +74,7 @@ SET
     email = COALESCE(sqlc.narg('email')::text, email),
     batch = COALESCE(sqlc.narg('batch')::text, batch),
     description = COALESCE(sqlc.narg('description')::text, description),
+    social_links = COALESCE(sqlc.narg('social_links')::jsonb, social_links),
     updated_at = NOW()
 WHERE id = sqlc.arg('id')
 RETURNING
@@ -79,6 +87,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at;
 
@@ -100,6 +109,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at;
 
@@ -127,4 +137,5 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     updated_at;

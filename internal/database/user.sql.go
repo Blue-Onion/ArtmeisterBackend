@@ -8,9 +8,11 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -23,9 +25,13 @@ INSERT INTO users (
     role,
     image,
     banner_image,
-    description
+    description,
+    social_links
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9,
+    COALESCE($10, '{}'::jsonb)
+)
 RETURNING 
     id,
     name,
@@ -36,6 +42,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 `
@@ -50,6 +57,7 @@ type CreateUserParams struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	Column10    interface{}
 }
 
 type CreateUserRow struct {
@@ -62,6 +70,7 @@ type CreateUserRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -77,6 +86,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.Image,
 		arg.BannerImage,
 		arg.Description,
+		arg.Column10,
 	)
 	var i CreateUserRow
 	err := row.Scan(
@@ -89,6 +99,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -106,6 +117,7 @@ SELECT
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 FROM users
@@ -122,6 +134,7 @@ type GetUserRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -139,6 +152,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -157,6 +171,7 @@ SELECT
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 FROM users
@@ -174,6 +189,7 @@ type GetUserByEmailRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -192,6 +208,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -215,6 +232,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 `
@@ -235,6 +253,7 @@ type PatchUserAdminRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -252,6 +271,7 @@ func (q *Queries) PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) 
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -270,6 +290,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     updated_at
 `
 
@@ -284,6 +305,7 @@ type PatchUserImagesRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	UpdatedAt   time.Time
 }
 
@@ -295,6 +317,7 @@ func (q *Queries) PatchUserImages(ctx context.Context, arg PatchUserImagesParams
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -335,8 +358,9 @@ SET
     email = COALESCE($2::text, email),
     batch = COALESCE($3::text, batch),
     description = COALESCE($4::text, description),
+    social_links = COALESCE($5::jsonb, social_links),
     updated_at = NOW()
-WHERE id = $5
+WHERE id = $6
 RETURNING
     id,
     name,
@@ -347,6 +371,7 @@ RETURNING
     image,
     banner_image,
     description,
+    social_links,
     created_at,
     updated_at
 `
@@ -356,6 +381,7 @@ type PatchUserProfileParams struct {
 	Email       sql.NullString
 	Batch       sql.NullString
 	Description sql.NullString
+	SocialLinks pqtype.NullRawMessage
 	ID          uuid.UUID
 }
 
@@ -369,6 +395,7 @@ type PatchUserProfileRow struct {
 	Image       sql.NullString
 	BannerImage sql.NullString
 	Description sql.NullString
+	SocialLinks json.RawMessage
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -379,6 +406,7 @@ func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfilePara
 		arg.Email,
 		arg.Batch,
 		arg.Description,
+		arg.SocialLinks,
 		arg.ID,
 	)
 	var i PatchUserProfileRow
@@ -392,6 +420,7 @@ func (q *Queries) PatchUserProfile(ctx context.Context, arg PatchUserProfilePara
 		&i.Image,
 		&i.BannerImage,
 		&i.Description,
+		&i.SocialLinks,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

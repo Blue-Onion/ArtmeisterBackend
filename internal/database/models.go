@@ -7,6 +7,7 @@ package database
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -99,12 +100,53 @@ func (ns NullArtStatus) Value() (driver.Value, error) {
 	return string(ns.ArtStatus), nil
 }
 
+type ModeOfConduct string
+
+const (
+	ModeOfConductOnline  ModeOfConduct = "online"
+	ModeOfConductOffline ModeOfConduct = "offline"
+)
+
+func (e *ModeOfConduct) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ModeOfConduct(s)
+	case string:
+		*e = ModeOfConduct(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ModeOfConduct: %T", src)
+	}
+	return nil
+}
+
+type NullModeOfConduct struct {
+	ModeOfConduct ModeOfConduct
+	Valid         bool // Valid is true if ModeOfConduct is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullModeOfConduct) Scan(value interface{}) error {
+	if value == nil {
+		ns.ModeOfConduct, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ModeOfConduct.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullModeOfConduct) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ModeOfConduct), nil
+}
+
 type UserRole string
 
 const (
-	UserRoleAdmin     UserRole = "admin"
-	UserRoleUser      UserRole = "user"
-	UserRoleModerator UserRole = "moderator"
+	UserRoleAdmin UserRole = "admin"
+	UserRoleUser  UserRole = "user"
 )
 
 func (e *UserRole) Scan(src interface{}) error {
@@ -154,6 +196,26 @@ type Art struct {
 	UpdatedAt   time.Time
 }
 
+type Event struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Venue       sql.NullString
+	Image       sql.NullString
+	BannerImage sql.NullString
+	EventDate   time.Time
+	Status      ModeOfConduct
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type EventAttendee struct {
+	ID       uuid.UUID
+	EventID  uuid.UUID
+	UserID   uuid.UUID
+	JoinedAt time.Time
+}
+
 type User struct {
 	ID          uuid.UUID
 	Name        string
@@ -163,6 +225,7 @@ type User struct {
 	BannerImage sql.NullString
 	Image       sql.NullString
 	Batch       string
+	SocialLinks json.RawMessage
 	Status      AccountStatus
 	Role        UserRole
 	CreatedAt   time.Time
