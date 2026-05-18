@@ -28,16 +28,17 @@ type ArtRepository interface {
 
 type EventRepository interface {
 	CreateEvent(ctx context.Context, arg CreateEventParams) (Event, error)
-
 	DeleteEvent(ctx context.Context, id uuid.UUID) error
-
 	GetEventByID(ctx context.Context, id uuid.UUID) (Event, error)
-
 	ListEvents(ctx context.Context) ([]Event, error)
-
 	ListEventsByMode(ctx context.Context, status ModeOfConduct) ([]Event, error)
-
 	ListUpcomingEvents(ctx context.Context) ([]Event, error)
-
 	UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error)
+}
+type EventAttendeesRepository interface {
+	CountEventAttendees(ctx context.Context, eventID uuid.UUID) (int32, error)
+	EnrollUserToEvent(ctx context.Context, arg EnrollUserToEventParams) (EventAttendee, error)
+	ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]User, error)
+	ListMyEvents(ctx context.Context, userID uuid.UUID) ([]Event, error)
+	RemoveUserFromEvent(ctx context.Context, arg RemoveUserFromEventParams) error
 }

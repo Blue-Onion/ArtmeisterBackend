@@ -7,16 +7,20 @@ import (
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
 
-type Handler struct {
+type EventHandler struct {
 	Repo database.EventRepository
 }
+type EventAttendeeHandler struct {
+	Repo database.EventAttendeesRepository
+}
 
-func (h *Handler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
@@ -91,7 +95,7 @@ func (h *Handler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
-func (h *Handler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
@@ -105,7 +109,7 @@ func (h *Handler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, "ok")
 }
-func (h *Handler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
@@ -119,7 +123,7 @@ func (h *Handler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, res)
 }
-func (h *Handler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
 	res, err := h.Repo.ListEvents(r.Context())
 	if err != nil {
 		handler.RespondWithError(w, 400, err.Error())
@@ -127,7 +131,7 @@ func (h *Handler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, res)
 }
-func (h *Handler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
@@ -206,4 +210,68 @@ func (h *Handler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
+}
+func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, 400, "Not Authorized")
+		return
+	}
+	userId := user.ID
+	id := chi.URLParam(r, "id")
+	event_id, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	param := database.EnrollUserToEventParams{
+		ID:      uuid.New(),
+		EventID: event_id,
+		UserID:  userId,
+	}
+	res, err := h.Repo.EnrollUserToEvent(r.Context(), param)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
+}
+func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, r *http.Request) {
+	user_id := r.URL.Query().Get("user_id")
+	userId, err := uuid.Parse(user_id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	id := chi.URLParam(r, "id")
+	event_id, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	param := database.RemoveUserFromEventParams{
+		EventID: event_id,
+		UserID:  userId,
+	}
+	err = h.Repo.RemoveUserFromEvent(r.Context(), param)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, "ok")
+}
+func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	event_id, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
+
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, res)
 }
