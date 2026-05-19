@@ -7,8 +7,20 @@ import (
 	"os"
 )
 
-func RespondWithJson(w http.ResponseWriter, code int, payload interface{}) {
-	data, err := json.Marshal(payload)
+type res struct {
+	Success bool
+	Data    any
+}
+
+func RespondWithJson(w http.ResponseWriter, code int, payload any) {
+	res := res{}
+	if code < 299 {
+		res.Success = true
+	} else {
+		res.Success = false
+	}
+	res.Data = payload
+	data, err := json.Marshal(res)
 	if err != nil {
 		log.Println("Failed to parse Json")
 		w.WriteHeader(http.StatusInternalServerError)

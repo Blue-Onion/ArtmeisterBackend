@@ -31,14 +31,17 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file, fileHeader, err := r.FormFile("image")
-	if fileHeader.Size > 5<<20 {
-		handler.RespondWithError(w, http.StatusRequestEntityTooLarge, "File too large")
-	}
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
 		return
 	}
 	defer file.Close()
+
+	if fileHeader != nil && fileHeader.Size > 5<<20 {
+		handler.RespondWithError(w, http.StatusRequestEntityTooLarge, "File too large")
+		return
+	}
+
 	name := r.FormValue("name")
 	if len(name) < 3 {
 		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
@@ -46,6 +49,9 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 	}
 	desc := r.FormValue("description")
 	tags := r.MultipartForm.Value["tags"]
+	if tags == nil {
+		tags = []string{}
+	}
 	path := fmt.Sprintf("uploads/%s/art", user.ID.String())
 	id := uuid.New()
 	url, err := utlis.SaveLocal(file, id.String(), path)
@@ -126,9 +132,7 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	}
 	err = h.Repo.DeleteArt(r.Context(), param)
 	if err != nil {
-
 		if errors.Is(err, sql.ErrNoRows) {
-
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
@@ -139,10 +143,9 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 
 }
 func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
-
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
-		handler.RespondWithError(w, http.StatusNonAuthoritativeInfo, "Not Authorized")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 	id := chi.URLParam(r, "id")
@@ -151,7 +154,6 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	artId, err := uuid.Parse(id)
-
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
@@ -162,7 +164,13 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	desc := r.FormValue("description")
-	tags := r.MultipartForm.Value["tags"]
+	var tags []string
+	if r.MultipartForm != nil {
+		tags = r.MultipartForm.Value["tags"]
+	}
+	if tags == nil {
+		tags = []string{}
+	}
 
 	params := database.UpdateArtParams{
 		ID:          artId,
@@ -172,11 +180,8 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		Description: utlis.ToNilStr(&desc),
 	}
 	updatedWork, err := h.Repo.UpdateArt(r.Context(), params)
-
 	if err != nil {
-
 		if errors.Is(err, sql.ErrNoRows) {
-
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}

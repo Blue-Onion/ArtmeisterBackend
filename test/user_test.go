@@ -83,11 +83,14 @@ func TestHandleCreateUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
 
-	var createdUser database.CreateUserRow
-	json.NewDecoder(rr.Body).Decode(&createdUser)
+	var response struct {
+		Success bool
+		Data    database.CreateUserRow
+	}
+	json.NewDecoder(rr.Body).Decode(&response)
 
-	if createdUser.Name != userData.Name {
-		t.Errorf("handler returned unexpected body: got %v want %v", createdUser.Name, userData.Name)
+	if response.Data.Name != userData.Name {
+		t.Errorf("handler returned unexpected body: got %v want %v", response.Data.Name, userData.Name)
 	}
 }
 
