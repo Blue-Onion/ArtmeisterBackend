@@ -196,6 +196,21 @@ type Art struct {
 	UpdatedAt   time.Time
 }
 
+type ArtComment struct {
+	ID        uuid.UUID
+	ArtID     uuid.UUID
+	UserID    uuid.UUID
+	Comment   string
+	CreatedAt time.Time
+}
+
+type ArtLike struct {
+	ID        uuid.UUID
+	ArtID     uuid.UUID
+	UserID    uuid.UUID
+	CreatedAt time.Time
+}
+
 type Event struct {
 	ID          uuid.UUID
 	Name        string
