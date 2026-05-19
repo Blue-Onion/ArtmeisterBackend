@@ -35,6 +35,10 @@ func GetUser(ctx context.Context) (User, bool) {
 	return user, ok
 }
 
+func WithUser(ctx context.Context, u User) context.Context {
+	return context.WithValue(ctx, userContextKey, u)
+}
+
 func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenCookie, err := r.Cookie("authToken")

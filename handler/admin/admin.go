@@ -50,6 +50,10 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 		Status: database.AccountStatus(req.Status),
 	}
 	user, err := h.Repo.PatchUserAdmin(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	handler.RespondWithJson(w, http.StatusOK, user)
 }
 func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
@@ -70,5 +74,9 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 		Status: database.ArtStatus(status),
 	}
 	art, err := h.Repo.UpdateArtStatus(r.Context(), params)
+	if err != nil {
+		handler.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	handler.RespondWithJson(w, http.StatusOK, art)
 }

@@ -17,6 +17,10 @@ func GetAdmin(ctx context.Context) (User, bool) {
 	return user, ok
 }
 
+func WithAdmin(ctx context.Context, u User) context.Context {
+	return context.WithValue(ctx, admin, u)
+}
+
 func (h Handler) MiddlewareAdminAuth(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenCookie, err := r.Cookie("authToken")

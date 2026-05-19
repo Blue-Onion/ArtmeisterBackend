@@ -214,7 +214,7 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
-		handler.RespondWithError(w, 400, "Not Authorized")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 	userId := user.ID
