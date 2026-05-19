@@ -40,3 +40,6 @@ func SaveLocal(file multipart.File, fileName string, path string) (string, error
 	}
 	return filePath, nil
 }
+func DeleteLocal(path string) (string, error) {
+	return "", nil
+}

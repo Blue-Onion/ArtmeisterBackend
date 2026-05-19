@@ -5,6 +5,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type ArtMetaDataRepository interface {
+	AddArtComment(ctx context.Context, arg AddArtCommentParams) (ArtComment, error)
+	CheckArtLikedByUser(ctx context.Context, arg CheckArtLikedByUserParams) (bool, error)
+	DeleteArtComment(ctx context.Context, arg DeleteArtCommentParams) error
+	GetArtCommentsByArtID(ctx context.Context, artID uuid.UUID) ([]GetArtCommentsByArtIDRow, error)
+	GetArtCommentsCount(ctx context.Context, artID uuid.UUID) (int32, error)
+	GetArtLikesCount(ctx context.Context, artID uuid.UUID) (int32, error)
+	LikeArt(ctx context.Context, arg LikeArtParams) (ArtLike, error)
+	UnlikeArt(ctx context.Context, arg UnlikeArtParams) error
+}
 type UserRepository interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
