@@ -27,3 +27,31 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, 200, comments)
 }
+func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	artId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	commentsCount, err := h.Repo.GetArtCommentsCount(r.Context(), artId)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, commentsCount)
+}
+func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	artId, err := uuid.Parse(id)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	likeCount, err := h.Repo.GetArtLikesCount(r.Context(), artId)
+	if err != nil {
+		handler.RespondWithError(w, 400, err.Error())
+		return
+	}
+	handler.RespondWithJson(w, 200, likeCount)
+}
