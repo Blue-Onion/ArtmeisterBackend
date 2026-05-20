@@ -1,8 +1,6 @@
 package art
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -87,7 +85,7 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	}
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, arts)
@@ -105,7 +103,11 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	}
 	art, err := h.Repo.GetArtByID(r.Context(), artId)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)
@@ -130,9 +132,9 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 		ID:     artId,
 		UserID: user.ID,
 	}
-	err = h.Repo.DeleteArt(r.Context(), param)
+	_, err = h.Repo.DeleteArt(r.Context(), param)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if utlis.IsNotFound(err) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
@@ -181,7 +183,7 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 	}
 	updatedWork, err := h.Repo.UpdateArt(r.Context(), params)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if utlis.IsNotFound(err) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}

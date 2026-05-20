@@ -1,9 +1,7 @@
 package user
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -57,7 +55,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.Repo.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if utlis.IsNotFound(err) {
 			handler.RespondWithError(w, http.StatusNotFound, "No account found with this email")
 			return
 		}
@@ -176,8 +174,7 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	updatedUser, err := h.Repo.PatchUserProfile(r.Context(), params)
 
 	if err != nil {
-
-		if errors.Is(err, sql.ErrNoRows) {
+		if utlis.IsNotFound(err) {
 			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
 			return
 		}
@@ -235,6 +232,10 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := h.Repo.PatchUserImages(r.Context(), params)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
+			return
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
 		return
 	}
@@ -256,6 +257,10 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	}
 	dbUser, err := h.Repo.GetUserByEmail(r.Context(), user.Email)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "User not found")
+			return
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to verify user")
 		return
 	}
@@ -275,6 +280,10 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := h.Repo.PatchUserPassword(r.Context(), params)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "User not found")
+			return
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update password")
 		return
 	}

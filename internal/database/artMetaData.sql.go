@@ -57,9 +57,10 @@ func (q *Queries) CheckArtLikedByUser(ctx context.Context, arg CheckArtLikedByUs
 	return liked, err
 }
 
-const deleteArtComment = `-- name: DeleteArtComment :exec
+const deleteArtComment = `-- name: DeleteArtComment :one
 DELETE FROM art_comments
 WHERE id = $1 AND user_id = $2
+RETURNING id
 `
 
 type DeleteArtCommentParams struct {
@@ -67,9 +68,11 @@ type DeleteArtCommentParams struct {
 	UserID uuid.UUID
 }
 
-func (q *Queries) DeleteArtComment(ctx context.Context, arg DeleteArtCommentParams) error {
-	_, err := q.db.ExecContext(ctx, deleteArtComment, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteArtComment(ctx context.Context, arg DeleteArtCommentParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, deleteArtComment, arg.ID, arg.UserID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getArtCommentsByArtID = `-- name: GetArtCommentsByArtID :many
@@ -177,9 +180,10 @@ func (q *Queries) LikeArt(ctx context.Context, arg LikeArtParams) (ArtLike, erro
 	return i, err
 }
 
-const unlikeArt = `-- name: UnlikeArt :exec
+const unlikeArt = `-- name: UnlikeArt :one
 DELETE FROM art_likes
 WHERE art_id = $1 AND user_id = $2
+RETURNING art_id
 `
 
 type UnlikeArtParams struct {
@@ -187,7 +191,9 @@ type UnlikeArtParams struct {
 	UserID uuid.UUID
 }
 
-func (q *Queries) UnlikeArt(ctx context.Context, arg UnlikeArtParams) error {
-	_, err := q.db.ExecContext(ctx, unlikeArt, arg.ArtID, arg.UserID)
-	return err
+func (q *Queries) UnlikeArt(ctx context.Context, arg UnlikeArtParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, unlikeArt, arg.ArtID, arg.UserID)
+	var art_id uuid.UUID
+	err := row.Scan(&art_id)
+	return art_id, err
 }

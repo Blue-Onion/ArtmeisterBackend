@@ -43,7 +43,11 @@ func (h Handler) MiddlewareAdminAuth(next http.Handler) http.HandlerFunc {
 
 		dbUser, err := h.Repo.GetUser(r.Context(), id)
 		if err != nil {
-			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
+			if utlis.IsNotFound(err) {
+				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
+				return
+			}
+			handler.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		if dbUser.Role != database.UserRoleAdmin {

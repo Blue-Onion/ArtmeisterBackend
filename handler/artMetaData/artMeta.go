@@ -8,6 +8,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
+	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
@@ -25,10 +26,10 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 	}
 	comments, err := h.Repo.GetArtCommentsByArtID(r.Context(), artId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments")
 		return
 	}
-	handler.RespondWithJson(w, 200, comments)
+	handler.RespondWithJson(w, http.StatusOK, comments)
 }
 func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -39,10 +40,10 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 	}
 	commentsCount, err := h.Repo.GetArtCommentsCount(r.Context(), artId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments count")
 		return
 	}
-	handler.RespondWithJson(w, 200, commentsCount)
+	handler.RespondWithJson(w, http.StatusOK, commentsCount)
 }
 func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -53,10 +54,10 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 	}
 	likeCount, err := h.Repo.GetArtLikesCount(r.Context(), artId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get likes count")
 		return
 	}
-	handler.RespondWithJson(w, 200, likeCount)
+	handler.RespondWithJson(w, http.StatusOK, likeCount)
 }
 func (h *Handler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -75,12 +76,16 @@ func (h *Handler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 		UserID: userId,
 		ID:     commentId,
 	}
-	err = h.Repo.DeleteArtComment(r.Context(), param)
+	_, err = h.Repo.DeleteArtComment(r.Context(), param)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Comment not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete comment")
 		return
 	}
-	handler.RespondWithJson(w, 200, "Deleted Successfully")
+	handler.RespondWithJson(w, http.StatusOK, "Deleted Successfully")
 }
 func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -111,10 +116,10 @@ func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
 	comment, err := h.Repo.AddArtComment(r.Context(), param)
 
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to add comment")
 		return
 	}
-	handler.RespondWithJson(w, 200, comment)
+	handler.RespondWithJson(w, http.StatusOK, comment)
 }
 func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -137,10 +142,10 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 	comment, err := h.Repo.LikeArt(r.Context(), param)
 
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to like art")
 		return
 	}
-	handler.RespondWithJson(w, 200, comment)
+	handler.RespondWithJson(w, http.StatusOK, comment)
 }
 func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -160,11 +165,15 @@ func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
 		UserID: userId,
 		ArtID:  artId,
 	}
-	err = h.Repo.UnlikeArt(r.Context(), param)
+	_, err = h.Repo.UnlikeArt(r.Context(), param)
 
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Like not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to unlike art")
 		return
 	}
-	handler.RespondWithJson(w, 200, "Ok")
+	handler.RespondWithJson(w, http.StatusOK, "Ok")
 }

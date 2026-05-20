@@ -88,16 +88,16 @@ func (m *mockArtRepo) UpdateArt(ctx context.Context, arg database.UpdateArtParam
 	return a, nil
 }
 
-func (m *mockArtRepo) DeleteArt(ctx context.Context, arg database.DeleteArtParams) error {
+func (m *mockArtRepo) DeleteArt(ctx context.Context, arg database.DeleteArtParams) (uuid.UUID, error) {
 	if m.deleteErr != nil {
-		return m.deleteErr
+		return uuid.UUID{}, m.deleteErr
 	}
 	a, ok := m.arts[arg.ID]
 	if !ok || a.UserID != arg.UserID {
-		return sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	delete(m.arts, arg.ID)
-	return nil
+	return arg.ID, nil
 }
 
 func newMockArtRepo() *mockArtRepo {
@@ -139,7 +139,7 @@ func TestHandleGetArtById(t *testing.T) {
 		{
 			name:           "Non-existent Art",
 			artIDParam:     uuid.New().String(),
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Empty ID Param",
@@ -150,7 +150,7 @@ func TestHandleGetArtById(t *testing.T) {
 			name:           "DB Error",
 			artIDParam:     artUUID.String(),
 			mockErr:        fmt.Errorf("connection refused"),
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 
@@ -216,7 +216,7 @@ func TestHandleGetArts(t *testing.T) {
 			name:           "DB Error",
 			userIDParam:    userUUID.String(),
 			mockErr:        fmt.Errorf("db error"),
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 

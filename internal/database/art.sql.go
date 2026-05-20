@@ -52,9 +52,10 @@ func (q *Queries) CreateArt(ctx context.Context, arg CreateArtParams) (Art, erro
 	return i, err
 }
 
-const deleteArt = `-- name: DeleteArt :exec
+const deleteArt = `-- name: DeleteArt :one
 DELETE FROM art
 WHERE id = $1 AND user_id = $2
+RETURNING id
 `
 
 type DeleteArtParams struct {
@@ -62,9 +63,11 @@ type DeleteArtParams struct {
 	UserID uuid.UUID
 }
 
-func (q *Queries) DeleteArt(ctx context.Context, arg DeleteArtParams) error {
-	_, err := q.db.ExecContext(ctx, deleteArt, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteArt(ctx context.Context, arg DeleteArtParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, deleteArt, arg.ID, arg.UserID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getArtByID = `-- name: GetArtByID :one

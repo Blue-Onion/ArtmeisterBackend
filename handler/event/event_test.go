@@ -68,15 +68,15 @@ func (m *mockEventRepo) ListEvents(ctx context.Context) ([]database.Event, error
 	return res, nil
 }
 
-func (m *mockEventRepo) DeleteEvent(ctx context.Context, id uuid.UUID) error {
+func (m *mockEventRepo) DeleteEvent(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
 	if m.getErr != nil {
-		return m.getErr
+		return uuid.UUID{}, m.getErr
 	}
 	if _, ok := m.events[id]; !ok {
-		return sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	delete(m.events, id)
-	return nil
+	return id, nil
 }
 
 func (m *mockEventRepo) EnrollUserToEvent(ctx context.Context, arg database.EnrollUserToEventParams) (database.EventAttendee, error) {
@@ -99,13 +99,13 @@ func (m *mockEventRepo) EnrollUserToEvent(ctx context.Context, arg database.Enro
 	}, nil
 }
 
-func (m *mockEventRepo) RemoveUserFromEvent(ctx context.Context, arg database.RemoveUserFromEventParams) error {
+func (m *mockEventRepo) RemoveUserFromEvent(ctx context.Context, arg database.RemoveUserFromEventParams) (uuid.UUID, error) {
 	if m.attendeeErr != nil {
-		return m.attendeeErr
+		return uuid.UUID{}, m.attendeeErr
 	}
 	list, ok := m.attendees[arg.EventID]
 	if !ok {
-		return sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	found := false
 	var updated []uuid.UUID
@@ -117,10 +117,10 @@ func (m *mockEventRepo) RemoveUserFromEvent(ctx context.Context, arg database.Re
 		}
 	}
 	if !found {
-		return sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	m.attendees[arg.EventID] = updated
-	return nil
+	return arg.EventID, nil
 }
 
 func (m *mockEventRepo) ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]database.User, error) {
@@ -159,7 +159,7 @@ func TestHandleGetEventById(t *testing.T) {
 	}{
 		{"Success", eventUUID.String(), http.StatusOK},
 		{"Invalid UUID", "bad", http.StatusBadRequest},
-		{"Not Found", uuid.New().String(), http.StatusBadRequest},
+		{"Not Found", uuid.New().String(), http.StatusNotFound},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -218,7 +218,7 @@ func TestHandleDeleteEvent(t *testing.T) {
 		{
 			name:           "Non-existent Event",
 			eventIDParam:   uuid.New().String(),
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusNotFound,
 		},
 	}
 
@@ -344,7 +344,7 @@ func TestHandleDeleteEventAttendee(t *testing.T) {
 			name:           "Non-existent Attendance",
 			eventIDParam:   eventUUID.String(),
 			queryUserID:    uuid.New().String(),
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Invalid Event UUID",

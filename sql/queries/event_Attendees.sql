@@ -8,9 +8,10 @@ VALUES (
 RETURNING *;
 
 
--- name: RemoveUserFromEvent :exec
+-- name: RemoveUserFromEvent :one
 DELETE FROM event_attendees
-WHERE event_id = $1 AND user_id = $2;
+WHERE event_id = $1 AND user_id = $2
+RETURNING event_id;
 
 
 -- name: ListEventAttendees :many

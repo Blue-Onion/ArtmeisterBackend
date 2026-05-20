@@ -629,7 +629,7 @@ func TestHandlePasswordChange(t *testing.T) {
 				OldPassword: pwd,
 				Password:    "new_password_789",
 			},
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusNotFound,
 		},
 	}
 

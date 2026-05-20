@@ -4,9 +4,10 @@ VALUES ($1, $2)
 RETURNING *;
 
 
--- name: UnlikeArt :exec
+-- name: UnlikeArt :one
 DELETE FROM art_likes
-WHERE art_id = $1 AND user_id = $2;
+WHERE art_id = $1 AND user_id = $2
+RETURNING art_id;
 
 
 -- name: CheckArtLikedByUser :one
@@ -28,9 +29,10 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 
--- name: DeleteArtComment :exec
+-- name: DeleteArtComment :one
 DELETE FROM art_comments
-WHERE id = $1 AND user_id = $2;
+WHERE id = $1 AND user_id = $2
+RETURNING id;
 
 
 -- name: GetArtCommentsByArtID :many

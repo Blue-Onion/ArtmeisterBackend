@@ -139,9 +139,10 @@ func (q *Queries) ListMyEvents(ctx context.Context, userID uuid.UUID) ([]Event, 
 	return items, nil
 }
 
-const removeUserFromEvent = `-- name: RemoveUserFromEvent :exec
+const removeUserFromEvent = `-- name: RemoveUserFromEvent :one
 DELETE FROM event_attendees
 WHERE event_id = $1 AND user_id = $2
+RETURNING event_id
 `
 
 type RemoveUserFromEventParams struct {
@@ -149,7 +150,9 @@ type RemoveUserFromEventParams struct {
 	UserID  uuid.UUID
 }
 
-func (q *Queries) RemoveUserFromEvent(ctx context.Context, arg RemoveUserFromEventParams) error {
-	_, err := q.db.ExecContext(ctx, removeUserFromEvent, arg.EventID, arg.UserID)
-	return err
+func (q *Queries) RemoveUserFromEvent(ctx context.Context, arg RemoveUserFromEventParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, removeUserFromEvent, arg.EventID, arg.UserID)
+	var event_id uuid.UUID
+	err := row.Scan(&event_id)
+	return event_id, err
 }

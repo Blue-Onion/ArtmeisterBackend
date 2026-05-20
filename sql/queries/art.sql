@@ -58,6 +58,7 @@ SET
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteArt :exec
+-- name: DeleteArt :one
 DELETE FROM art
-WHERE id = $1 AND user_id = $2;
+WHERE id = $1 AND user_id = $2
+RETURNING id;

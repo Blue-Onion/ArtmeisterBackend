@@ -7,6 +7,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
+	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
@@ -51,7 +52,11 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 	}
 	user, err := h.Repo.PatchUserAdmin(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "User not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update user status")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, user)
@@ -75,7 +80,11 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	art, err := h.Repo.UpdateArtStatus(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update art status")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)

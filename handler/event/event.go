@@ -99,37 +99,45 @@ func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request)
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
-		handler.RespondWithError(w, 400, "Invalid Id")
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Id")
 		return
 	}
-	err = h.Repo.DeleteEvent(r.Context(), eventId)
+	_, err = h.Repo.DeleteEvent(r.Context(), eventId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
-	handler.RespondWithJson(w, 200, "ok")
+	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
-		handler.RespondWithError(w, 400, "Invalid Id")
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Id")
 		return
 	}
 	res, err := h.Repo.GetEventByID(r.Context(), eventId)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get event")
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
 	res, err := h.Repo.ListEvents(r.Context())
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list events")
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(20 << 20)
@@ -206,7 +214,11 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 	}
 	res, err := h.Repo.UpdateEvent(r.Context(), params)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update event")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
@@ -231,10 +243,10 @@ func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Re
 	}
 	res, err := h.Repo.EnrollUserToEvent(r.Context(), param)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, r *http.Request) {
 	user_id := r.URL.Query().Get("user_id")
@@ -253,12 +265,16 @@ func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, 
 		EventID: event_id,
 		UserID:  userId,
 	}
-	err = h.Repo.RemoveUserFromEvent(r.Context(), param)
+	_, err = h.Repo.RemoveUserFromEvent(r.Context(), param)
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Attendance record not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to remove user from event")
 		return
 	}
-	handler.RespondWithJson(w, 200, "ok")
+	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -268,10 +284,10 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		return
 	}
 	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
-
+ 
 	if err != nil {
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
 		return
 	}
-	handler.RespondWithJson(w, 200, res)
+	handler.RespondWithJson(w, http.StatusOK, res)
 }
