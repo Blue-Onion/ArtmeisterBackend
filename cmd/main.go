@@ -13,6 +13,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/admin"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
+	artmetadata "github.com/Blue-Onion/ArtmeisterBackend/handler/artMetaData"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/event"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
@@ -41,6 +42,9 @@ func main() {
 	artHanlder := &art.Handler{
 		Repo: apiCfg.ArtRepo,
 	}
+	artMetaDataHandler := &artmetadata.Handler{
+		Repo: apiCfg.ArtMetaDataRepo,
+	}
 	eventHandler := &event.EventHandler{
 		Repo: apiCfg.EventRepo,
 	}
@@ -66,7 +70,7 @@ func main() {
 	userRoute := user.UserRouter(userHandler, middlewareHandler)
 	router.Mount("/auth", userRoute)
 	// Art Routes
-	artRoute := art.ArtRouter(artHanlder, middlewareHandler)
+	artRoute := art.ArtRouter(artHanlder, artMetaDataHandler, middlewareHandler)
 	router.Mount("/art", artRoute)
 	// Event Routes
 	eventRoute := event.EventRouter(eventHandler, eventAttendeeHandler, middlewareHandler)

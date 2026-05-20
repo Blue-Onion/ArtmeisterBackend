@@ -16,6 +16,7 @@ import (
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/admin"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
+	artmetadata "github.com/Blue-Onion/ArtmeisterBackend/handler/artMetaData"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/event"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
@@ -50,6 +51,7 @@ func setupTestRouter(db *sql.DB, query *database.Queries) *chi.Mux {
 	userHandler := &user.Handler{Repo: query}
 	middlewareHandler := &middleware.Handler{Repo: query}
 	artHandler := &art.Handler{Repo: query}
+	artMetadataHandler := &artmetadata.Handler{Repo: query}
 	eventHandler := &event.EventHandler{Repo: query}
 	eventAttendeeHandler := &event.EventAttendeeHandler{Repo: query}
 
@@ -57,7 +59,7 @@ func setupTestRouter(db *sql.DB, query *database.Queries) *chi.Mux {
 
 	// Mount routes
 	router.Mount("/auth", user.UserRouter(userHandler, middlewareHandler))
-	router.Mount("/art", art.ArtRouter(artHandler, middlewareHandler))
+	router.Mount("/art", art.ArtRouter(artHandler, artMetadataHandler, middlewareHandler))
 	router.Mount("/event", event.EventRouter(eventHandler, eventAttendeeHandler, middlewareHandler))
 	router.Mount("/admin", admin.AdminRoute(userHandler, artHandler, middlewareHandler))
 
