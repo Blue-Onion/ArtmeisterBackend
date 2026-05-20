@@ -134,13 +134,13 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 		UserID: userId,
 		ArtID:  artId,
 	}
-	like, err := h.Repo.LikeArt(r.Context(), param)
+	comment, err := h.Repo.LikeArt(r.Context(), param)
 
 	if err != nil {
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	handler.RespondWithJson(w, 200, like)
+	handler.RespondWithJson(w, 200, comment)
 }
 func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
