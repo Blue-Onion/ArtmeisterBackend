@@ -51,3 +51,6 @@ type CreateEvent struct {
 	EventDate   string `json:"event_date"`
 	Status      string `json:"status"`
 }
+type AddComment struct {
+	Comment string `json:"comment"`
+}

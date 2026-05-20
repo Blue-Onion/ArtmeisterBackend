@@ -23,6 +23,7 @@ type ApiConfig struct {
 	ArtRepo           database.ArtRepository
 	EventRepo         database.EventRepository
 	EventAttendeeRepo database.EventAttendeesRepository
+	ArtMetaDataRepo   database.ArtMetaDataRepository
 }
 
 var (
@@ -90,5 +91,6 @@ func DbQuries() (*ApiConfig, error) {
 	apiConfig.ArtRepo = query
 	apiConfig.EventRepo = query
 	apiConfig.EventAttendeeRepo = query
+	apiConfig.ArtMetaDataRepo = query
 	return apiConfig, nil
 }
