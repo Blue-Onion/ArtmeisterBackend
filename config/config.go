@@ -14,9 +14,10 @@ import (
 )
 
 type Config struct {
-	DbUrl     string
-	Port      string
-	JWTSecert string
+	DbUrl        string
+	Port         string
+	JWTSecert    string
+	Frontend_Url string
 }
 type ApiConfig struct {
 	UserRepo          database.UserRepository
@@ -68,11 +69,13 @@ func loadConfig() *Config {
 	dbUrl := os.Getenv("DATABASE_URL")
 	Port := os.Getenv("PORT")
 	Jwt := os.Getenv("JWT_SECERT")
+	fUrl := os.Getenv("FRONTEND_URL")
 
 	return &Config{
-		DbUrl:     dbUrl,
-		Port:      Port,
-		JWTSecert: Jwt,
+		DbUrl:        dbUrl,
+		Port:         Port,
+		JWTSecert:    Jwt,
+		Frontend_Url: fUrl,
 	}
 
 }

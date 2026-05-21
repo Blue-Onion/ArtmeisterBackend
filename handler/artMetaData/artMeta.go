@@ -2,8 +2,6 @@ package artmetadata
 
 import (
 	"encoding/json"
-	"net/http"
-
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
@@ -11,6 +9,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 type Handler struct {
