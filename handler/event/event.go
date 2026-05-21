@@ -111,6 +111,11 @@ func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request)
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
+	path := fmt.Sprintf("%s", id)
+	err = utlis.DeleteLocal(path)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
@@ -284,7 +289,7 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		return
 	}
 	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
- 
+
 	if err != nil {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
 		return

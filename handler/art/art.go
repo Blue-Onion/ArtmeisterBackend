@@ -118,6 +118,7 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
+	userId := user.ID.String()
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
@@ -140,6 +141,11 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete art")
 		return
+	}
+	path := fmt.Sprintf("%s/art/%s.png", userId, id)
+	err = utlis.DeleteLocal(path)
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 	handler.RespondWithJson(w, http.StatusOK, "Art Work Deleted")
 
