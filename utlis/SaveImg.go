@@ -12,7 +12,6 @@ type Save interface {
 }
 
 func isPath(path string) bool {
-
 	_, err := os.Stat(path)
 	if err == nil {
 		return true

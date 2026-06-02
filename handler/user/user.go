@@ -82,10 +82,22 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	handler.RespondWithJson(w, http.StatusOK, map[string]string{
-		"message": "Login successful",
+		"id":    user.ID.String(),
+		"name":  user.Name,
+		"email": user.Email,
+		"image": user.Image.String,
 	})
 }
 
+func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		handler.RespondWithError(w, 401, "Not Authenticated User")
+		return
+	}
+	handler.RespondWithJson(w, 200, user)
+
+}
 func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "authToken",
