@@ -92,7 +92,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
-		handler.RespondWithError(w, 401, "Not Authenticated User")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authenticated User")
 		return
 	}
 	handler.RespondWithJson(w, 200, user)
