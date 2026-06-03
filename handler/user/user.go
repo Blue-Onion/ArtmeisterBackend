@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
@@ -20,8 +21,12 @@ type Handler struct {
 }
 
 func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleUpdateImg: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -39,31 +44,50 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 	path := fmt.Sprintf("uploads/%s", user.ID.String())
 	filepath, err := utlis.SaveLocal(file, "userPhoto", path)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateImg: failed to save image for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleUpdateImg: image updated for user %s", user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, filepath)
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	params := model.AuthenticateUser{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&params)
 	if err != nil {
+		if log != nil {
+			log.Error("HandleLogin: invalid request body")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	user, err := h.Repo.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
 		if utlis.IsNotFound(err) {
+			if log != nil {
+				log.Info(fmt.Sprintf("HandleLogin: no account found for email %s", params.Email))
+			}
 			handler.RespondWithError(w, http.StatusNotFound, "No account found with this email")
 			return
+		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleLogin: db error looking up email %s: %v", params.Email, err))
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to look up user")
 		return
 	}
 	isValid := utlis.CheckPassword(user.Password, params.Password)
 	if !isValid {
+		if log != nil {
+			log.Info(fmt.Sprintf("HandleLogin: incorrect password for user %s", user.ID))
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Incorrect password")
 		return
 	}
@@ -81,6 +105,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600 * 24,
 		SameSite: http.SameSiteLaxMode,
 	})
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleLogin: user %s logged in successfully", user.ID))
+	}
 	handler.RespondWithJson(w, http.StatusOK, map[string]string{
 		"id":    user.ID.String(),
 		"name":  user.Name,
@@ -99,6 +126,7 @@ func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
 
 }
 func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "authToken",
 		Value:    "",
@@ -108,16 +136,23 @@ func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
+	if log != nil {
+		log.Info("HandleLogOut: user logged out")
+	}
 	handler.RespondWithJson(w, http.StatusOK, map[string]string{
 		"message": "Logged out successfully",
 	})
 }
 
 func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	param := model.CreateUser{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&param)
 	if err != nil {
+		if log != nil {
+			log.Error("HandleCreateUser: invalid request body")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
@@ -141,15 +176,25 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Column10:    socialLinks,
 	})
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateUser: failed to create user %s: %v", param.Email, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleCreateUser: user created with email %s", param.Email))
 	}
 	handler.RespondWithJson(w, http.StatusCreated, user)
 }
 
 func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleUpdateUserProfile: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -190,16 +235,25 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateUserProfile: failed to update profile for user %s: %v", userId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update user profile")
 		return
 	}
-
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleUpdateUserProfile: profile updated for user %s", userId))
+	}
 	handler.RespondWithJson(w, http.StatusOK, updatedUser)
 }
 
 func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleImageChange: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -248,15 +302,25 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleImageChange: failed to update images for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleImageChange: images updated for user %s", user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 
 func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandlePasswordChange: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -277,6 +341,9 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !utlis.CheckPassword(dbUser.Password, req.OldPassword) {
+		if log != nil {
+			log.Info(fmt.Sprintf("HandlePasswordChange: incorrect old password for user %s", user.ID))
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Current password is incorrect")
 		return
 	}
@@ -296,8 +363,14 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "User not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlePasswordChange: failed to update password for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update password")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandlePasswordChange: password updated for user %s", user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }

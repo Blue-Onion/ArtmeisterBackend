@@ -8,7 +8,7 @@ import (
 )
 
 var path string = "logs"
-var appName string = "Mozaik"
+var appName string = "Art Meister"
 
 type Logger struct {
 	service string
@@ -120,5 +120,4 @@ func (l *Logger) Error(msg string) {
 		msg,
 	)
 	file.WriteString(logLine)
-
 }

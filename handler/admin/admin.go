@@ -2,9 +2,11 @@ package admin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
@@ -20,6 +22,7 @@ type ArtHandler struct {
 }
 
 func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	userId := chi.URLParam(r, "id")
 	id, err := uuid.Parse(userId)
 	if err != nil {
@@ -56,12 +59,19 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 			handler.RespondWithError(w, http.StatusNotFound, "User not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerUserStatus: failed to update status for user %s: %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update user status")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandlerUserStatus: user %s status updated (role=%s, status=%s)", id, req.Role, req.Status))
 	}
 	handler.RespondWithJson(w, http.StatusOK, user)
 }
 func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	artId := chi.URLParam(r, "art_id")
 	id, err := uuid.Parse(artId)
 	if err != nil {
@@ -84,8 +94,14 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtStatus: failed to update art %s status: %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update art status")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandlerArtStatus: art %s status updated to %s", id, status))
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)
 }

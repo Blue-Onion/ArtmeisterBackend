@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
@@ -21,6 +22,7 @@ type EventAttendeeHandler struct {
 }
 
 func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
@@ -90,12 +92,19 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	}
 	res, err := h.Repo.CreateEvent(r.Context(), params)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateEvent: failed to create event %s: %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleCreateEvent: event %s created", id))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
@@ -108,17 +117,26 @@ func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request)
 			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEvent: failed to delete event %s: %v", eventId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
 	path := fmt.Sprintf("%s", id)
 	err = utlis.DeleteLocal(path)
 	if err != nil {
-		fmt.Println(err.Error())
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEvent: failed to delete local files for event %s: %v", id, err))
+		}
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleDeleteEvent: event %s deleted", eventId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
@@ -131,20 +149,28 @@ func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request
 			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetEventById: failed to get event %s: %v", eventId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get event")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	res, err := h.Repo.ListEvents(r.Context())
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetAllEvent: failed to list events: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list events")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
@@ -223,14 +249,24 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: failed to update event %s: %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update event")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleUpdateEvent: event %s updated", id))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleJoinEvent: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
@@ -248,12 +284,19 @@ func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Re
 	}
 	res, err := h.Repo.EnrollUserToEvent(r.Context(), param)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleJoinEvent: failed to enroll user %s to event %s: %v", userId, event_id, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleJoinEvent: user %s joined event %s", userId, event_id))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user_id := r.URL.Query().Get("user_id")
 	userId, err := uuid.Parse(user_id)
 	if err != nil {
@@ -276,12 +319,19 @@ func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, 
 			handler.RespondWithError(w, http.StatusNotFound, "Attendance record not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEventAttendee: failed to remove user %s from event %s: %v", userId, event_id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to remove user from event")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleDeleteEventAttendee: user %s removed from event %s", userId, event_id))
 	}
 	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	event_id, err := uuid.Parse(id)
 	if err != nil {
@@ -291,6 +341,9 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleAllEventAttendee: failed to list attendees for event %s: %v", event_id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
 		return
 	}

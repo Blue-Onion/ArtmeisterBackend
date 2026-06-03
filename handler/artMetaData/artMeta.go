@@ -2,14 +2,17 @@ package artmetadata
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
-	"net/http"
 )
 
 type Handler struct {
@@ -17,6 +20,7 @@ type Handler struct {
 }
 
 func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
@@ -25,12 +29,16 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 	}
 	comments, err := h.Repo.GetArtCommentsByArtID(r.Context(), artId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtComments: failed to get comments for art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, comments)
 }
 func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
@@ -39,12 +47,16 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 	}
 	commentsCount, err := h.Repo.GetArtCommentsCount(r.Context(), artId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtCommentsCount: failed for art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments count")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, commentsCount)
 }
 func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
@@ -53,14 +65,21 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 	}
 	likeCount, err := h.Repo.GetArtLikesCount(r.Context(), artId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtLikeCount: failed for art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get likes count")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, likeCount)
 }
 func (h *Handler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleDeleteComment: unauthenticated request")
+		}
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
@@ -81,14 +100,24 @@ func (h *Handler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Comment not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteComment: failed to delete comment %s: %v", commentId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete comment")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleDeleteComment: comment %s deleted by user %s", commentId, userId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, "Deleted Successfully")
 }
 func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleComment: unauthenticated request")
+		}
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
@@ -115,14 +144,24 @@ func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
 	comment, err := h.Repo.AddArtComment(r.Context(), param)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleComment: failed to add comment on art %s by user %s: %v", artId, userId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to add comment")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleComment: comment added on art %s by user %s", artId, userId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, comment)
 }
 func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleLike: unauthenticated request")
+		}
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
@@ -141,14 +180,24 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 	comment, err := h.Repo.LikeArt(r.Context(), param)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleLike: failed to like art %s by user %s: %v", artId, userId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to like art")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleLike: art %s liked by user %s", artId, userId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, comment)
 }
 func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleUnLike: unauthenticated request")
+		}
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
@@ -171,8 +220,14 @@ func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Like not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUnLike: failed to unlike art %s by user %s: %v", artId, userId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to unlike art")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleUnLike: art %s unliked by user %s", artId, userId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, "Ok")
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/art"
 	artmetadata "github.com/Blue-Onion/ArtmeisterBackend/handler/artMetaData"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/event"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/user"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 
@@ -32,7 +33,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to database: %v", err)
 	}
-
+	// Load Logger
+	_, err = logger.GetLogger()
+	if err != nil {
+		log.Fatalf("Couldn't intialize Logger: %v", err)
+	}
 	//Handlers
 	userHandler := &user.Handler{
 		Repo: apiCfg.UserRepo,
@@ -68,6 +73,7 @@ func main() {
 		MaxAge:           300,
 	}))
 	router.Use(middleware.MiddlewareRateLimit)
+	router.Use(middleware.MiddlewareLogger)
 	router.Get("/health", handler.Health)
 	router.Get("/", handler.MainPage)
 

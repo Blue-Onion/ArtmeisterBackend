@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
+	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
@@ -17,8 +18,12 @@ type Handler struct {
 }
 
 func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleArtCreation: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -67,12 +72,19 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 	}
 	art, err := h.Repo.CreateArt(r.Context(), params)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: failed to create art for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleArtCreation: art %s created by user %s", id, user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)
 }
 func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	userId := chi.URLParam(r, "user_id")
 	if userId == "" {
 		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
@@ -85,12 +97,16 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	}
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	Id := chi.URLParam(r, "id")
 	if Id == "" {
 		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
@@ -107,14 +123,21 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: failed to get art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
 		return
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)
 }
 func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleArtDeletion: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -139,20 +162,32 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtDeletion: failed to delete art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete art")
 		return
 	}
 	path := fmt.Sprintf("%s/art/%s.png", userId, id)
 	err = utlis.DeleteLocal(path)
 	if err != nil {
-		fmt.Println(err.Error())
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtDeletion: failed to delete local file for art %s: %v", id, err))
+		}
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleArtDeletion: art %s deleted by user %s", artId, user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, "Art Work Deleted")
 
 }
 func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandlerArtUpdation: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
@@ -193,9 +228,14 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
 			return
 		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtUpdation: failed to update art %s: %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update art")
 		return
 	}
-
+	if log != nil {
+		log.Info(fmt.Sprintf("HandlerArtUpdation: art %s updated by user %s", artId, user.ID))
+	}
 	handler.RespondWithJson(w, http.StatusOK, updatedWork)
 }
