@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 )
 
 var path string = "logs"
@@ -55,7 +56,6 @@ func initLogsFile() error {
 				if err != nil {
 					return err
 				}
-				return nil
 			} else {
 				return err
 			}
@@ -79,6 +79,46 @@ func loadLogger(str string) (*Logger, error) {
 		service: str,
 	}, nil
 }
-func (*Logger) Info(str string) {
+func (l *Logger) Info(msg string) {
+
+	filePath := fmt.Sprintf("%s/%s", path, "info.log")
+	file, err := os.OpenFile(
+		filePath,
+		os.O_APPEND|os.O_WRONLY,
+		0644,
+	)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	logLine := fmt.Sprintf(
+		"[%s] [INFO] [%s] %s\n",
+		time.Now().Format(time.RFC3339),
+		l.service,
+		msg,
+	)
+	file.WriteString(logLine)
+
+}
+
+func (l *Logger) Error(msg string) {
+
+	filePath := fmt.Sprintf("%s/%s", path, "err.log")
+	file, err := os.OpenFile(
+		filePath,
+		os.O_APPEND|os.O_WRONLY,
+		0644,
+	)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	logLine := fmt.Sprintf(
+		"[%s] [ERROR] [%s] %s\n",
+		time.Now().Format(time.RFC3339),
+		l.service,
+		msg,
+	)
+	file.WriteString(logLine)
 
 }
