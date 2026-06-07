@@ -26,6 +26,9 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 	userId := chi.URLParam(r, "id")
 	id, err := uuid.Parse(userId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerUserStatus: invalid user ID format '%s': %v", userId, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -33,18 +36,30 @@ func (h *UserHandler) HandlerUserStatus(w http.ResponseWriter, r *http.Request) 
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&req)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerUserStatus: failed to decode request body: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if req.Role == "" && req.Status == "" {
+		if log != nil {
+			log.Error("HandlerUserStatus: role and status cannot both be empty")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Role and status cannot both be empty")
 		return
 	}
 	if req.Role != "" && req.Role != string(database.UserRoleUser) {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerUserStatus: invalid role provided '%s'", req.Role))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid role provided")
 		return
 	}
 	if req.Status != "" && req.Status != string(database.AccountStatusApproved) && req.Status != string(database.AccountStatusBanned) && req.Status != string(database.AccountStatusPending) {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerUserStatus: invalid status provided '%s'", req.Status))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid status provided")
 		return
 	}
@@ -75,12 +90,17 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 	artId := chi.URLParam(r, "art_id")
 	id, err := uuid.Parse(artId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtStatus: invalid art ID format '%s': %v", artId, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	status := r.URL.Query().Get("status")
 	if status != string(database.ArtStatusApproved) && status != string(database.AccountStatusBanned) && status != string(database.AccountStatusPending) {
-
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtStatus: invalid status provided '%s'", status))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid status provided")
 		return
 	}

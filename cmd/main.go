@@ -61,9 +61,10 @@ func main() {
 	//Server
 	router := chi.NewRouter()
 	AllowedOrigin := []string{
-		fmt.Sprintf("http/%s", cfg.Frontend_Url),
-		fmt.Sprintf("https/%s", cfg.Frontend_Url),
+		fmt.Sprintf("http:/%s", cfg.Frontend_Url),
+		fmt.Sprintf("https:/%s", cfg.Frontend_Url),
 	}
+	fmt.Println(AllowedOrigin)
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   AllowedOrigin,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},

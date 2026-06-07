@@ -32,11 +32,17 @@ func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 	}
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateImg: failed to parse multipart form: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 	file, _, err := r.FormFile("image")
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateImg: image file form retrieval failed: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
 		return
 	}
@@ -93,6 +99,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := utlis.GenerateJwt(user.ID)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleLogin: failed to generate JWT for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authentication token")
 		return
 	}
@@ -117,10 +126,17 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
+		if log != nil {
+			log.Error("HandleMe: unauthenticated request")
+		}
 		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authenticated User")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleMe: profile retrieved for user %s", user.ID))
 	}
 	handler.RespondWithJson(w, 200, user)
 
@@ -158,6 +174,9 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	hashPass, err := utlis.HashPassword(param.Password)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateUser: failed to hash password for %s: %v", param.Email, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
@@ -165,7 +184,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if param.Social != nil {
 		socialLinks = *param.Social
 	}
-	user, err := h.Repo.CreateUser(r.Context(), database.CreateUserParams{
+	userParam := database.CreateUserParams{
 		Name:        param.Name,
 		Email:       param.Email,
 		Password:    hashPass,
@@ -174,7 +193,9 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Status:      database.AccountStatusPending,
 		Role:        database.UserRoleUser,
 		Column10:    socialLinks,
-	})
+	}
+	fmt.Println(userParam)
+	user, err := h.Repo.CreateUser(r.Context(), userParam)
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleCreateUser: failed to create user %s: %v", param.Email, err))
@@ -201,10 +222,16 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	id := chi.URLParam(r, "id")
 	userId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateUserProfile: invalid user ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid user ID format")
 		return
 	}
 	if user.Role != database.UserRoleAdmin && user.ID != userId {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateUserProfile: user %s unauthorized to update profile %s", user.ID, userId))
+		}
 		handler.RespondWithError(w, http.StatusForbidden, "You are not authorized to update this profile")
 		return
 	}
@@ -212,6 +239,9 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&req)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateUserProfile: failed to decode request body: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
@@ -259,6 +289,9 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 	}
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleImageChange: failed to parse multipart form for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
@@ -273,6 +306,9 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 		defer userfile.Close()
 		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "user", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleImageChange: failed to save user image for user %s: %v", user.ID, saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save profile image")
 			return
 		}
@@ -285,6 +321,9 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 		defer bannerFile.Close()
 		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleImageChange: failed to save banner image for user %s: %v", user.ID, saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
 			return
 		}
@@ -293,6 +332,9 @@ func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !hasUpdate {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleImageChange: no image provided in request for user %s", user.ID))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (user_image or banner_image) is required")
 		return
 	}
@@ -328,14 +370,23 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&req)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlePasswordChange: failed to decode request body for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	dbUser, err := h.Repo.GetUserByEmail(r.Context(), user.Email)
 	if err != nil {
 		if utlis.IsNotFound(err) {
+			if log != nil {
+				log.Info(fmt.Sprintf("HandlePasswordChange: user email %s not found in DB: %v", user.Email, err))
+			}
 			handler.RespondWithError(w, http.StatusNotFound, "User not found")
 			return
+		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlePasswordChange: DB error looking up email %s: %v", user.Email, err))
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to verify user")
 		return
@@ -350,6 +401,9 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 
 	password, err := utlis.HashPassword(req.Password)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlePasswordChange: failed to hash new password for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process new password")
 		return
 	}

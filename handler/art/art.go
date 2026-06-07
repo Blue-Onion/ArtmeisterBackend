@@ -30,23 +30,35 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: failed to parse form data for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 	file, fileHeader, err := r.FormFile("image")
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: image form file not found for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
 		return
 	}
 	defer file.Close()
 
 	if fileHeader != nil && fileHeader.Size > 5<<20 {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: image file size too large for user %s: %d bytes", user.ID, fileHeader.Size))
+		}
 		handler.RespondWithError(w, http.StatusRequestEntityTooLarge, "File too large")
 		return
 	}
 
 	name := r.FormValue("name")
 	if len(name) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: art name too short for user %s: '%s'", user.ID, name))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
 		return
 	}
@@ -59,6 +71,9 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New()
 	url, err := utlis.SaveLocal(file, id.String(), path)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtCreation: failed to save image to local file for user %s: %v", user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
 		return
 	}
@@ -87,11 +102,17 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	userId := chi.URLParam(r, "user_id")
 	if userId == "" {
+		if log != nil {
+			log.Error("HandleGetArts: user ID is empty")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
 	id, err := uuid.Parse(userId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArts: invalid user ID format '%s': %v", userId, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -103,17 +124,26 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
 		return
 	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArts: retrieved arts for user %s successfully", id))
+	}
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	Id := chi.URLParam(r, "id")
 	if Id == "" {
+		if log != nil {
+			log.Error("HandleGetArtById: art ID is empty")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(Id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -128,6 +158,9 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArtById: retrieved art %s successfully", artId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, art)
 }
@@ -144,11 +177,17 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 	userId := user.ID.String()
 	id := chi.URLParam(r, "id")
 	if id == "" {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtDeletion: art ID is empty (user %s)", user.ID))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleArtDeletion: invalid art ID format '%s' for user %s: %v", id, user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -193,16 +232,25 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 	}
 	id := chi.URLParam(r, "id")
 	if id == "" {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtUpdation: art ID is empty (user %s)", user.ID))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
 		return
 	}
 	artId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtUpdation: invalid art ID format '%s' for user %s: %v", id, user.ID, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	name := r.FormValue("name")
 	if len(name) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandlerArtUpdation: art name too short for user %s: '%s'", user.ID, name))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
 		return
 	}

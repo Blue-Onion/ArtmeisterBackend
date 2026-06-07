@@ -25,6 +25,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	log, _ := logger.GetLogger()
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateEvent: failed to parse form data: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
@@ -32,6 +35,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	path := fmt.Sprintf("uploads/event/%s", id.String())
 	name := r.FormValue("name")
 	if len(name) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateEvent: name too short: '%s'", name))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Too Short Name")
 		return
 	}
@@ -40,6 +46,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	eventDate, err := time.Parse("2006-01-02", form_date)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateEvent: invalid date format '%s': %v", form_date, err))
+		}
 		handler.RespondWithError(w, 400, "invalid date format (expected YYYY-MM-DD)")
 		return
 	}
@@ -50,6 +59,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	status := r.FormValue("status")
 	mode := database.ModeOfConduct(status)
 	if mode == "" {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleCreateEvent: unknown mode status '%s'", status))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Unknown Mode")
 		return
 	}
@@ -67,6 +79,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 		defer userfile.Close()
 		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "event-logo", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleCreateEvent: failed to save event logo: %v", saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save Event image")
 			return
 		}
@@ -79,6 +94,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 		defer bannerFile.Close()
 		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleCreateEvent: failed to save banner image: %v", saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
 			return
 		}
@@ -87,6 +105,9 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	}
 
 	if !hasUpdate {
+		if log != nil {
+			log.Error("HandleCreateEvent: at least one image (image or banner_image) is required")
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (image or banner_image) is required")
 		return
 	}
@@ -108,6 +129,9 @@ func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request)
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEvent: invalid ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Id")
 		return
 	}
@@ -140,6 +164,9 @@ func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request
 	id := chi.URLParam(r, "id")
 	eventId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetEventById: invalid ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Id")
 		return
 	}
@@ -155,6 +182,9 @@ func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get event")
 		return
 	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetEventById: retrieved event %s successfully", eventId))
+	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request) {
@@ -167,24 +197,36 @@ func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request)
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list events")
 		return
 	}
+	if log != nil {
+		log.Info("HandleGetAllEvent: retrieved all events successfully")
+	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
 func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: failed to parse form data: %v", err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 	eventId := chi.URLParam(r, "id")
 	id, err := uuid.Parse(eventId)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: invalid ID format '%s': %v", eventId, err))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	path := fmt.Sprintf("uploads/event/%s", id.String())
 	name := r.FormValue("name")
 	if len(name) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: name too short for event %s: '%s'", id, name))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Too Short Name")
 		return
 	}
@@ -193,6 +235,9 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 	eventDate, err := time.Parse("2006-01-02", form_date)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: invalid date format '%s' for event %s: %v", form_date, id, err))
+		}
 		handler.RespondWithError(w, 400, "invalid date format (expected YYYY-MM-DD)")
 		return
 	}
@@ -203,6 +248,9 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 	status := r.FormValue("status")
 	mode := database.ModeOfConduct(status)
 	if mode == "" {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: unknown mode status '%s' for event %s", status, id))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "Unknown Mode")
 		return
 	}
@@ -220,6 +268,9 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 		defer userfile.Close()
 		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "event-logo", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleUpdateEvent: failed to save event logo for event %s: %v", id, saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save Event image")
 			return
 		}
@@ -232,6 +283,9 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 		defer bannerFile.Close()
 		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
 		if saveErr != nil {
+			if log != nil {
+				log.Error(fmt.Sprintf("HandleUpdateEvent: failed to save banner image for event %s: %v", id, saveErr))
+			}
 			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
 			return
 		}
@@ -240,6 +294,9 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 	}
 
 	if !hasUpdate {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUpdateEvent: at least one image (image or banner_image) is required for event %s", id))
+		}
 		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (image or banner_image) is required")
 		return
 	}
@@ -274,6 +331,9 @@ func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Re
 	id := chi.URLParam(r, "id")
 	event_id, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleJoinEvent: invalid event ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -300,12 +360,18 @@ func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, 
 	user_id := r.URL.Query().Get("user_id")
 	userId, err := uuid.Parse(user_id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEventAttendee: invalid user_id format '%s': %v", user_id, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
 	id := chi.URLParam(r, "id")
 	event_id, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteEventAttendee: invalid event ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -335,6 +401,9 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 	id := chi.URLParam(r, "id")
 	event_id, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleAllEventAttendee: invalid event ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -346,6 +415,9 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleAllEventAttendee: retrieved attendees for event %s successfully", event_id))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }

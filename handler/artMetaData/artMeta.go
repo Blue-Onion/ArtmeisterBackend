@@ -24,6 +24,9 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtComments: invalid art ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -35,6 +38,9 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments")
 		return
 	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArtComments: retrieved comments for art %s successfully", artId))
+	}
 	handler.RespondWithJson(w, http.StatusOK, comments)
 }
 func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +48,9 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtCommentsCount: invalid art ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -53,6 +62,9 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments count")
 		return
 	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArtCommentsCount: retrieved comments count for art %s successfully", artId))
+	}
 	handler.RespondWithJson(w, http.StatusOK, commentsCount)
 }
 func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +72,9 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 	id := chi.URLParam(r, "id")
 	artId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtLikeCount: invalid art ID format '%s': %v", id, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -70,6 +85,9 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get likes count")
 		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArtLikeCount: retrieved likes count for art %s successfully", artId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, likeCount)
 }
@@ -87,6 +105,9 @@ func (h *Handler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	commentId, err := uuid.Parse(id)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleDeleteComment: invalid comment ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -121,10 +142,14 @@ func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
+	userId := user.ID
 	id := chi.URLParam(r, "art_id")
 	artId, err := uuid.Parse(id)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleComment: invalid art ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
@@ -132,10 +157,12 @@ func (h *Handler) HandleComment(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&req)
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleComment: failed to decode request body for art %s, user %s: %v", artId, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	userId := user.ID
 	param := database.AddArtCommentParams{
 		Comment: req.Comment,
 		UserID:  userId,
@@ -165,14 +192,17 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
+	userId := user.ID
 	id := chi.URLParam(r, "art_id")
 	artId, err := uuid.Parse(id)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleLike: invalid art ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	userId := user.ID
 	param := database.LikeArtParams{
 		UserID: userId,
 		ArtID:  artId,
@@ -201,14 +231,17 @@ func (h *Handler) HandleUnLike(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, 401, "Not Authorized")
 		return
 	}
+	userId := user.ID
 	id := chi.URLParam(r, "art_id")
 	artId, err := uuid.Parse(id)
 
 	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleUnLike: invalid art ID format '%s' for user %s: %v", id, userId, err))
+		}
 		handler.RespondWithError(w, 400, err.Error())
 		return
 	}
-	userId := user.ID
 	param := database.UnlikeArtParams{
 		UserID: userId,
 		ArtID:  artId,
