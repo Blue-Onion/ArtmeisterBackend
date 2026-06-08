@@ -9,14 +9,14 @@ import (
 )
 
 // ArtRouter defines routes for the art package.
-func ArtRouter(artHandler *Handler, artMetadataHandler *artmetadata.Handler, middlewareHandler *middleware.Handler) *chi.Mux {
+func ArtRouter(artHandler *Handler, artMetadataHandler *artmetadata.Handler, middlewareHandler *middleware.Handler, profile *ProfileHandler) *chi.Mux {
 	r := chi.NewRouter()
 	auth := middlewareHandler.MiddlewareAuth
-
 	// Public routes
-	r.Get("/user/{user_id}", artHandler.HandleGetArts)
+	r.Get("/u/{user_id}", artHandler.HandleGetArts)
 	r.Get("/{id}", artHandler.HandleGetArtById)
 
+	r.Get("/u/profile/{id}", profile.HandlerGetArtistProfile)
 	// Art metadata public routes
 	r.Get("/{id}/comments", artMetadataHandler.HandleGetArtComments)
 	r.Get("/{id}/comments/count", artMetadataHandler.HandleGetArtCommentsCount)

@@ -20,6 +20,36 @@ type Handler struct {
 	Repo database.UserRepository
 }
 
+func (h *Handler) HandleGetUserById(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	id := chi.URLParam(r, "id")
+	userId, err := uuid.Parse(id)
+
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArts: invalid user ID format '%s': %v", userId, err))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	user, err := h.Repo.GetUser(r.Context(), userId)
+	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			return
+		}
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetUserById: failed to get art %s: %v", userId, err))
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArtById: retrieved art %s successfully", userId))
+	}
+	handler.RespondWithJson(w, http.StatusOK, user)
+
+}
 func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	user, ok := middleware.GetUser(r.Context())

@@ -73,7 +73,6 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
-	router.Use(middleware.MiddlewareRateLimit)
 	router.Use(middleware.MiddlewareLogger)
 	router.Get("/health", handler.Health)
 	router.Get("/", handler.MainPage)
@@ -82,7 +81,11 @@ func main() {
 	userRoute := user.UserRouter(userHandler, middlewareHandler)
 	router.Mount("/auth", userRoute)
 	// Art Routes
-	artRoute := art.ArtRouter(artHanlder, artMetaDataHandler, middlewareHandler)
+	profile := art.ProfileHandler{
+		UserRepo: apiCfg.UserRepo,
+		ArtRepo:  apiCfg.ArtRepo,
+	}
+	artRoute := art.ArtRouter(artHanlder, artMetaDataHandler, middlewareHandler, &profile)
 	router.Mount("/art", artRoute)
 	// Event Routes
 	eventRoute := event.EventRouter(eventHandler, eventAttendeeHandler, middlewareHandler)

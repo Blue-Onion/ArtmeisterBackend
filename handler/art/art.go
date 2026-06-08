@@ -16,6 +16,15 @@ import (
 type Handler struct {
 	Repo database.ArtRepository
 }
+type ProfileHandler struct {
+	ArtRepo  database.ArtRepository
+	UserRepo database.UserRepository
+}
+
+type profile struct {
+	User database.GetUserRow
+	Art  []database.Art
+}
 
 func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
@@ -108,14 +117,19 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
+	fmt.Printf("userId raw = %q\n", userId)
+
+	fmt.Printf("userId len = %d\n", len(userId))
+
 	id, err := uuid.Parse(userId)
 	if err != nil {
 		if log != nil {
-			log.Error(fmt.Sprintf("HandleGetArts: invalid user ID format '%s': %v", userId, err))
+			log.Error(fmt.Sprintf("userId=%q err=%v", userId, err))
 		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	fmt.Println("Got here")
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
 		if log != nil {
@@ -127,6 +141,7 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleGetArts: retrieved arts for user %s successfully", id))
 	}
+	fmt.Println("Got here 1")
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
@@ -286,4 +301,45 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		log.Info(fmt.Sprintf("HandlerArtUpdation: art %s updated by user %s", artId, user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, updatedWork)
+}
+func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	userId := chi.URLParam(r, "id")
+	if userId == "" {
+		if log != nil {
+			log.Error("HandleGetArts: user ID is empty")
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		return
+	}
+	Id, err := uuid.Parse(userId)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	user, err := h.UserRepo.GetUser(r.Context(), Id)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
+		}
+		handler.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	artWork, err := h.ArtRepo.GetArtByUser(r.Context(), Id)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
+		}
+		handler.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	res := profile{
+		User: user,
+		Art:  artWork,
+	}
+	fmt.Println(res)
+	handler.RespondWithJson(w, 200, res)
 }

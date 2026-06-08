@@ -18,6 +18,7 @@ func UserRouter(userHandler *Handler, middlewareHandler *middleware.Handler) *ch
 	auth := middlewareHandler.MiddlewareAuth
 	r.Patch("/users/avatar", auth(http.HandlerFunc(userHandler.HandleImageChange)))
 	r.Patch("/users/{id}", auth(http.HandlerFunc(userHandler.HandleUpdateUserProfile)))
+	r.Get("/users/{id}", userHandler.HandleGetUserById)
 	r.Patch("/users/password", auth(http.HandlerFunc(userHandler.HandlePasswordChange)))
 	r.Post("/logout", auth(http.HandlerFunc(userHandler.HandleLogOut)))
 	r.Get("/me", auth(http.HandlerFunc(userHandler.HandleMe)))
