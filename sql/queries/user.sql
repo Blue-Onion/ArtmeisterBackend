@@ -47,6 +47,22 @@ FROM users
 WHERE id = $1;
 
 
+-- name: GetAllUser :many
+SELECT 
+    id,
+    name,
+    email,
+    batch,
+    status,
+    role,
+    image,
+    banner_image,
+    description,
+    social_links,
+    created_at,
+    updated_at
+FROM users;
+
 -- name: GetUserByEmail :one
 SELECT 
     id,
@@ -92,25 +108,20 @@ RETURNING
 
 
 -- name: PatchUserAdmin :one
+
 UPDATE users
+
 SET
-    status = COALESCE($2, status),
-    role = COALESCE($3, role),
+
+    status = COALESCE(sqlc.narg(status), status),
+
+    role = COALESCE(sqlc.narg(role), role),
+
     updated_at = NOW()
-WHERE id = $1
-RETURNING
-    id,
-    name,
-    email,
-    batch,
-    status,
-    role,
-    image,
-    banner_image,
-    description,
-    social_links,
-    created_at,
-    updated_at;
+
+WHERE id = sqlc.arg(id)
+
+RETURNING *;
 
 
 -- name: PatchUserPassword :one

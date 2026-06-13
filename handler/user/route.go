@@ -12,16 +12,17 @@ func UserRouter(userHandler *Handler, middlewareHandler *middleware.Handler) *ch
 
 	// Public routes
 	r.Post("/users", userHandler.HandleCreateUser)
-	r.Post("/login", userHandler.HandleLogin)
 
 	// Protected routes
 	auth := middlewareHandler.MiddlewareAuth
+	admin := middlewareHandler.MiddlewareAdminAuth
+	r.Get("/users", admin(http.HandlerFunc(userHandler.HandleGetAllUser)))
 	r.Patch("/users/avatar", auth(http.HandlerFunc(userHandler.HandleImageChange)))
 	r.Patch("/users/{id}", auth(http.HandlerFunc(userHandler.HandleUpdateUserProfile)))
 	r.Get("/users/{id}", userHandler.HandleGetUserById)
 	r.Patch("/users/password", auth(http.HandlerFunc(userHandler.HandlePasswordChange)))
 	r.Post("/logout", auth(http.HandlerFunc(userHandler.HandleLogOut)))
-	r.Get("/me", auth(http.HandlerFunc(userHandler.HandleMe)))
+	r.Get("/me", http.HandlerFunc(userHandler.HandleMe))
 
 	return r
 }

@@ -24,6 +24,7 @@ type EventAttendeeHandler struct {
 func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	err := r.ParseMultipartForm(20 << 20)
+
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleCreateEvent: failed to parse form data: %v", err))
@@ -32,7 +33,6 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	id := uuid.New()
-	path := fmt.Sprintf("uploads/event/%s", id.String())
 	name := r.FormValue("name")
 	if len(name) < 3 {
 		if log != nil {
@@ -42,7 +42,7 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	form_date := r.FormValue("date")
-
+	fmt.Println(form_date)
 	eventDate, err := time.Parse("2006-01-02", form_date)
 
 	if err != nil {
@@ -55,6 +55,8 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 
 	desc := r.FormValue("description")
 	venue := r.FormValue("venue")
+	LogoUrl := r.FormValue("LogoUrl")
+	bannerUrl := r.FormValue("bannerUrl")
 
 	status := r.FormValue("status")
 	mode := database.ModeOfConduct(status)
@@ -65,51 +67,15 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 		handler.RespondWithError(w, http.StatusBadRequest, "Unknown Mode")
 		return
 	}
-	hasUpdate := false
 	params := database.CreateEventParams{
 		ID:          id,
 		Name:        name,
 		Description: utlis.ToNilStr(&desc),
 		Venue:       utlis.ToNilStr(&venue),
 		Status:      mode,
+		Image:       utlis.ToNilStr(&LogoUrl),
+		BannerImage: utlis.ToNilStr(&bannerUrl),
 		EventDate:   eventDate,
-	}
-	userfile, _, err := r.FormFile("image")
-	if err == nil && userfile != nil {
-		defer userfile.Close()
-		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "event-logo", path)
-		if saveErr != nil {
-			if log != nil {
-				log.Error(fmt.Sprintf("HandleCreateEvent: failed to save event logo: %v", saveErr))
-			}
-			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save Event image")
-			return
-		}
-		params.Image = utlis.ToNilStr(&userImageFilePath)
-		hasUpdate = true
-	}
-
-	bannerFile, _, err := r.FormFile("banner_image")
-	if err == nil && bannerFile != nil {
-		defer bannerFile.Close()
-		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
-		if saveErr != nil {
-			if log != nil {
-				log.Error(fmt.Sprintf("HandleCreateEvent: failed to save banner image: %v", saveErr))
-			}
-			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
-			return
-		}
-		params.BannerImage = utlis.ToNilStr(&bannerImageFilePath)
-		hasUpdate = true
-	}
-
-	if !hasUpdate {
-		if log != nil {
-			log.Error("HandleCreateEvent: at least one image (image or banner_image) is required")
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (image or banner_image) is required")
-		return
 	}
 	res, err := h.Repo.CreateEvent(r.Context(), params)
 	if err != nil {

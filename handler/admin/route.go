@@ -18,8 +18,8 @@ func AdminRoute(userHandler *user.Handler, artHandler *art.Handler, middlewareHa
 	adminUserHandler := &UserHandler{Repo: userHandler.Repo}
 	adminArtHandler := &ArtHandler{Repo: artHandler.Repo}
 
-	r.Patch("/users/{id}/status", adminUserHandler.HandlerUserStatus)
 	r.Patch("/arts/{art_id}/status", adminArtHandler.HandlerArtStatus)
+	r.Patch("/users/{user_id}/status", adminUserHandler.HandlerRole)
 
 	return r
 }

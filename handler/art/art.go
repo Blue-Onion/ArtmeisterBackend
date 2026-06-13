@@ -36,33 +36,6 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
-
-	err := r.ParseMultipartForm(20 << 20)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: failed to parse form data for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
-		return
-	}
-	file, fileHeader, err := r.FormFile("image")
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: image form file not found for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
-		return
-	}
-	defer file.Close()
-
-	if fileHeader != nil && fileHeader.Size > 5<<20 {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: image file size too large for user %s: %d bytes", user.ID, fileHeader.Size))
-		}
-		handler.RespondWithError(w, http.StatusRequestEntityTooLarge, "File too large")
-		return
-	}
-
 	name := r.FormValue("name")
 	if len(name) < 3 {
 		if log != nil {
@@ -71,21 +44,31 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
 		return
 	}
+
+	url := r.FormValue("url")
+	if len(url) < 3 {
+
+		if log != nil {
+			log.Error("HandleArtCreation: Invalid Url")
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Url")
+		return
+	}
 	desc := r.FormValue("description")
 	tags := r.MultipartForm.Value["tags"]
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid form data")
+
+		return
+
+	}
 	if tags == nil {
 		tags = []string{}
 	}
-	path := fmt.Sprintf("uploads/%s/art", user.ID.String())
 	id := uuid.New()
-	url, err := utlis.SaveLocal(file, id.String(), path)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: failed to save image to local file for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
-		return
-	}
+
 	params := database.CreateArtParams{
 		ID:          id,
 		Name:        name,
@@ -342,4 +325,23 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 	}
 	fmt.Println(res)
 	handler.RespondWithJson(w, 200, res)
+}
+func (h *Handler) HandleGetPendingArt(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	arts, err := h.Repo.ListPendingArt(r.Context())
+	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			return
+		}
+		if log != nil {
+			log.Error("HandleGetPendingArt: err Occurred")
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	if log != nil {
+		log.Info("HandleGetPendingArt: retrieved art")
+	}
+	handler.RespondWithJson(w, http.StatusOK, arts)
 }

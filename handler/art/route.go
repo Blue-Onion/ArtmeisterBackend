@@ -15,6 +15,7 @@ func ArtRouter(artHandler *Handler, artMetadataHandler *artmetadata.Handler, mid
 	// Public routes
 	r.Get("/u/{user_id}", artHandler.HandleGetArts)
 	r.Get("/{id}", artHandler.HandleGetArtById)
+	r.Get("/pending-art", artHandler.HandleGetPendingArt)
 
 	r.Get("/u/profile/{id}", profile.HandlerGetArtistProfile)
 	// Art metadata public routes

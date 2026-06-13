@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Blue-Onion/ArtmeisterBackend/config"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
@@ -156,17 +157,36 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
-	log, _ := logger.GetLogger()
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		if log != nil {
-			log.Error("HandleMe: unauthenticated request")
+	tokenCookie, err := r.Cookie("authToken")
+	if err != nil {
+		if err == http.ErrNoCookie {
+
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
 		}
-		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authenticated User")
+		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: login required")
 		return
 	}
-	if log != nil {
-		log.Info(fmt.Sprintf("HandleMe: profile retrieved for user %s", user.ID))
+	userId, err := utlis.GetUserIdJwt(tokenCookie)
+	if err != nil {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: invalid or expired token")
+		return
+	}
+
+	id, err := uuid.Parse(userId)
+	if err != nil {
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid user ID format")
+		return
+	}
+
+	user, err := h.Repo.GetUser(r.Context(), id)
+	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
+			return
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 	handler.RespondWithJson(w, 200, user)
 
@@ -191,6 +211,7 @@ func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+	frontUrl := config.GetConfig().Frontend_Url
 	log, _ := logger.GetLogger()
 	param := model.CreateUser{}
 	decoder := json.NewDecoder(r.Body)
@@ -214,11 +235,13 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if param.Social != nil {
 		socialLinks = *param.Social
 	}
+	imgUrl := fmt.Sprintf("%s/default.jpeg", frontUrl)
 	userParam := database.CreateUserParams{
 		Name:        param.Name,
 		Email:       param.Email,
 		Password:    hashPass,
 		Batch:       param.Batch,
+		Image:       utlis.ToNilStr(&imgUrl),
 		Description: utlis.ToNilStr(&param.Description),
 		Status:      database.AccountStatusPending,
 		Role:        database.UserRoleUser,
@@ -236,6 +259,24 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleCreateUser: user created with email %s", param.Email))
 	}
+	token, err := utlis.GenerateJwt(user.ID)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleLogin: failed to generate JWT for user %s: %v", user.ID, err))
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authentication token")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "authToken",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		MaxAge:   3600 * 24,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	handler.RespondWithJson(w, http.StatusCreated, user)
 }
 
@@ -457,4 +498,21 @@ func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
 		log.Info(fmt.Sprintf("HandlePasswordChange: password updated for user %s", user.ID))
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
+}
+
+func (h *Handler) HandleGetAllUser(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+
+	user, err := h.Repo.GetAllUser(r.Context())
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	if log != nil {
+		log.Info("HandleGetAllUser: successfully")
+	}
+	handler.RespondWithJson(w, http.StatusOK, user)
 }
