@@ -54,6 +54,10 @@ func (h Handler) MiddlewareAdminAuth(next http.Handler) http.HandlerFunc {
 			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized:Admin not Found")
 			return
 		}
+		if dbUser.Status != database.AccountStatusApproved {
+			handler.RespondWithError(w, http.StatusUnauthorized, "You are Banned to do anything")
+			return
+		}
 		user := User{
 			ID:          dbUser.ID,
 			Name:        dbUser.Name,
