@@ -7,9 +7,18 @@ VALUES (
 )
 RETURNING *;
 
-
 -- name: GetEventByID :one
-SELECT *
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    banner_image,
+    event_date,
+    status,
+    created_at,
+    updated_at
 FROM events
 WHERE id = $1;
 
@@ -37,15 +46,15 @@ ORDER BY event_date ASC;
 -- name: UpdateEvent :one
 UPDATE events
 SET
-    name = $2,
-    description = $3,
-    venue = $4,
-    image = $5,
-    banner_image = $6,
-    event_date = $7,
-    status = $8,
+    name = COALESCE(sqlc.narg('name'), name),
+    description = COALESCE(sqlc.narg('description'), description),
+    venue = COALESCE(sqlc.narg('venue'), venue),
+    image = COALESCE(sqlc.narg('image'), image),
+    banner_image = COALESCE(sqlc.narg('banner_image'), banner_image),
+    event_date = COALESCE(sqlc.narg('event_date'), event_date),
+    status = COALESCE(sqlc.narg('status'), status),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = sqlc.arg('id')
 RETURNING *;
 
 

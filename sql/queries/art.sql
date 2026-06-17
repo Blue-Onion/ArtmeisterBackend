@@ -3,11 +3,39 @@ INSERT INTO art (id, name, description, image, tags, user_id)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
+-- name: GetArtProfileByID :one
+SELECT
+    a.id,
+    a.name,
+    a.description,
+    a.image,
+    a.tags,
+    a.status,
+    a.user_id,
+    a.created_at,
+    a.updated_at,
+    u.id AS user_id_ref,
+    u.username,
+    u.role,
+    u.status,
+    u.image AS user_image
+FROM art a
+JOIN users u ON a.user_id = u.id
+WHERE a.id = $1
+AND a.user_id = $2;
 
 -- name: GetArtByID :one
-SELECT *
+SELECT
+  id,
+  name,
+  description,
+image,
+tags,
+  user_id,
+  created_at,
+  updated_at
 FROM art
-WHERE id = $1;
+WHERE id= $1;
 
 
 -- name: GetArtByUser :many
@@ -43,11 +71,12 @@ ORDER BY created_at DESC;
 -- name: UpdateArt :one
 UPDATE art
 SET
-    name        = COALESCE($2, name),
-    description = COALESCE($3, description),
-    tags        = COALESCE($4, tags),
-    updated_at  = NOW()
-WHERE id = $1 AND user_id = $5
+    name = COALESCE(sqlc.narg('name'), name),
+    description = COALESCE(sqlc.narg('description'), description),
+    tags = COALESCE(sqlc.narg('tags'), tags),
+    updated_at = NOW()
+WHERE id = sqlc.arg('id')
+AND user_id = sqlc.arg('user_id')
 RETURNING *;
 
 -- name: UpdateArtStatus :one

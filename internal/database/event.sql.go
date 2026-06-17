@@ -74,7 +74,17 @@ func (q *Queries) DeleteEvent(ctx context.Context, id uuid.UUID) (uuid.UUID, err
 }
 
 const getEventByID = `-- name: GetEventByID :one
-SELECT id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    banner_image,
+    event_date,
+    status,
+    created_at,
+    updated_at
 FROM events
 WHERE id = $1
 `
@@ -222,32 +232,31 @@ func (q *Queries) ListUpcomingEvents(ctx context.Context) ([]Event, error) {
 const updateEvent = `-- name: UpdateEvent :one
 UPDATE events
 SET
-    name = $2,
-    description = $3,
-    venue = $4,
-    image = $5,
-    banner_image = $6,
-    event_date = $7,
-    status = $8,
+    name = COALESCE($1, name),
+    description = COALESCE($2, description),
+    venue = COALESCE($3, venue),
+    image = COALESCE($4, image),
+    banner_image = COALESCE($5, banner_image),
+    event_date = COALESCE($6, event_date),
+    status = COALESCE($7, status),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $8
 RETURNING id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
 `
 
 type UpdateEventParams struct {
-	ID          uuid.UUID
-	Name        string
+	Name        sql.NullString
 	Description sql.NullString
 	Venue       sql.NullString
 	Image       sql.NullString
 	BannerImage sql.NullString
-	EventDate   time.Time
-	Status      ModeOfConduct
+	EventDate   sql.NullTime
+	Status      NullModeOfConduct
+	ID          uuid.UUID
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
 	row := q.db.QueryRowContext(ctx, updateEvent,
-		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.Venue,
@@ -255,6 +264,7 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		arg.BannerImage,
 		arg.EventDate,
 		arg.Status,
+		arg.ID,
 	)
 	var i Event
 	err := row.Scan(

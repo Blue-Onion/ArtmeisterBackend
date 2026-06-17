@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -71,21 +72,39 @@ func (q *Queries) DeleteArt(ctx context.Context, arg DeleteArtParams) (uuid.UUID
 }
 
 const getArtByID = `-- name: GetArtByID :one
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at
+SELECT
+  id,
+  name,
+  description,
+image,
+tags,
+  user_id,
+  created_at,
+  updated_at
 FROM art
-WHERE id = $1
+WHERE id= $1
 `
 
-func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (Art, error) {
+type GetArtByIDRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	UserID      uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (GetArtByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getArtByID, id)
-	var i Art
+	var i GetArtByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.Image,
 		pq.Array(&i.Tags),
-		&i.Status,
 		&i.UserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -130,6 +149,72 @@ func (q *Queries) GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const getArtProfileByID = `-- name: GetArtProfileByID :one
+SELECT
+    a.id,
+    a.name,
+    a.description,
+    a.image,
+    a.tags,
+    a.status,
+    a.user_id,
+    a.created_at,
+    a.updated_at,
+    u.id AS user_id_ref,
+    u.username,
+    u.role,
+    u.status,
+    u.image AS user_image
+FROM art a
+JOIN users u ON a.user_id = u.id
+WHERE a.id = $1
+AND a.user_id = $2
+`
+
+type GetArtProfileByIDParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+type GetArtProfileByIDRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	Status      ArtStatus
+	UserID      uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	UserIDRef   uuid.UUID
+	Username    sql.NullString
+	Role        UserRole
+	Status_2    AccountStatus
+	UserImage   sql.NullString
+}
+
+func (q *Queries) GetArtProfileByID(ctx context.Context, arg GetArtProfileByIDParams) (GetArtProfileByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getArtProfileByID, arg.ID, arg.UserID)
+	var i GetArtProfileByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Image,
+		pq.Array(&i.Tags),
+		&i.Status,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UserIDRef,
+		&i.Username,
+		&i.Role,
+		&i.Status_2,
+		&i.UserImage,
+	)
+	return i, err
 }
 
 const listArt = `-- name: ListArt :many
@@ -293,28 +378,29 @@ func (q *Queries) ListPendingArt(ctx context.Context) ([]Art, error) {
 const updateArt = `-- name: UpdateArt :one
 UPDATE art
 SET
-    name        = COALESCE($2, name),
-    description = COALESCE($3, description),
-    tags        = COALESCE($4, tags),
-    updated_at  = NOW()
-WHERE id = $1 AND user_id = $5
+    name = COALESCE($1, name),
+    description = COALESCE($2, description),
+    tags = COALESCE($3, tags),
+    updated_at = NOW()
+WHERE id = $4
+AND user_id = $5
 RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
 `
 
 type UpdateArtParams struct {
-	ID          uuid.UUID
-	Name        string
+	Name        sql.NullString
 	Description sql.NullString
 	Tags        []string
+	ID          uuid.UUID
 	UserID      uuid.UUID
 }
 
 func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, error) {
 	row := q.db.QueryRowContext(ctx, updateArt,
-		arg.ID,
 		arg.Name,
 		arg.Description,
 		pq.Array(arg.Tags),
+		arg.ID,
 		arg.UserID,
 	)
 	var i Art

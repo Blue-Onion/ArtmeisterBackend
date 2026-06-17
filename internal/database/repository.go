@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"database/sql"
+
 	"github.com/google/uuid"
 )
 
@@ -10,15 +12,16 @@ type UserRepository interface {
 	GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 	GetAllUser(ctx context.Context) ([]GetAllUserRow, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
-	PatchUserImages(ctx context.Context, arg PatchUserImagesParams) (PatchUserImagesRow, error)
 	PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error)
-	PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) (User, error)
+	PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) (PatchUserAdminRow, error)
+	GetUserByUsername(ctx context.Context, username sql.NullString) (GetUserByUsernameRow, error)
 	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error)
 }
 type ArtRepository interface {
 	DeleteArt(ctx context.Context, arg DeleteArtParams) (uuid.UUID, error)
-	GetArtByID(ctx context.Context, id uuid.UUID) (Art, error)
 	GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, error)
+	GetArtProfileByID(ctx context.Context, arg GetArtProfileByIDParams) (GetArtProfileByIDRow, error)
+	GetArtByID(ctx context.Context, id uuid.UUID) (GetArtByIDRow, error)
 	ListArt(ctx context.Context) ([]Art, error)
 	ListPendingArt(ctx context.Context) ([]Art, error)
 	ListArtByTag(ctx context.Context, tags []string) ([]Art, error)
@@ -47,6 +50,7 @@ type EventRepository interface {
 	UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error)
 }
 type EventAttendeesRepository interface {
+	GetMyEventById(ctx context.Context, arg GetMyEventByIdParams) (Event, error)
 	CountEventAttendees(ctx context.Context, eventID uuid.UUID) (int32, error)
 	EnrollUserToEvent(ctx context.Context, arg EnrollUserToEventParams) (EventAttendee, error)
 	ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]User, error)

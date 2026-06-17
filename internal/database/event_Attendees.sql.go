@@ -52,8 +52,40 @@ func (q *Queries) EnrollUserToEvent(ctx context.Context, arg EnrollUserToEventPa
 	return i, err
 }
 
+const getMyEventById = `-- name: GetMyEventById :one
+SELECT e.id, e.name, e.description, e.venue, e.image, e.banner_image, e.event_date, e.status, e.created_at, e.updated_at
+FROM events e
+JOIN event_attendees ea ON ea.event_id = e.id
+WHERE ea.user_id = $1
+AND ea.event_id = $2
+LIMIT 1
+`
+
+type GetMyEventByIdParams struct {
+	UserID  uuid.UUID
+	EventID uuid.UUID
+}
+
+func (q *Queries) GetMyEventById(ctx context.Context, arg GetMyEventByIdParams) (Event, error) {
+	row := q.db.QueryRowContext(ctx, getMyEventById, arg.UserID, arg.EventID)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Venue,
+		&i.Image,
+		&i.BannerImage,
+		&i.EventDate,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listEventAttendees = `-- name: ListEventAttendees :many
-SELECT u.id, u.name, u.password, u.email, u.description, u.banner_image, u.image, u.batch, u.social_links, u.status, u.role, u.created_at, u.updated_at
+SELECT u.id, u.name, u.username, u.password, u.email, u.description, u.banner_image, u.image, u.batch, u.social_links, u.status, u.role, u.created_at, u.updated_at
 FROM users u
 JOIN event_attendees ea ON ea.user_id = u.id
 WHERE ea.event_id = $1
@@ -72,6 +104,7 @@ func (q *Queries) ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Username,
 			&i.Password,
 			&i.Email,
 			&i.Description,

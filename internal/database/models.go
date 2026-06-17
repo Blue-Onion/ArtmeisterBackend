@@ -234,12 +234,13 @@ type EventAttendee struct {
 type User struct {
 	ID          uuid.UUID
 	Name        string
+	Username    sql.NullString
 	Password    string
 	Email       string
 	Description sql.NullString
 	BannerImage sql.NullString
 	Image       sql.NullString
-	Batch       string
+	Batch       sql.NullString
 	SocialLinks json.RawMessage
 	Status      AccountStatus
 	Role        UserRole

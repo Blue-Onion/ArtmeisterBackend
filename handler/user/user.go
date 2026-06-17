@@ -1,11 +1,11 @@
 package user
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/Blue-Onion/ArtmeisterBackend/config"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
@@ -50,47 +50,6 @@ func (h *Handler) HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, http.StatusOK, user)
 
-}
-func (h *Handler) HandleUpdateImg(w http.ResponseWriter, r *http.Request) {
-	log, _ := logger.GetLogger()
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		if log != nil {
-			log.Error("HandleUpdateImg: unauthenticated request")
-		}
-		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
-		return
-	}
-	err := r.ParseMultipartForm(20 << 20)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleUpdateImg: failed to parse multipart form: %v", err))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
-		return
-	}
-	file, _, err := r.FormFile("image")
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleUpdateImg: image file form retrieval failed: %v", err))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Image file is required")
-		return
-	}
-	defer file.Close()
-	path := fmt.Sprintf("uploads/%s", user.ID.String())
-	filepath, err := utlis.SaveLocal(file, "userPhoto", path)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleUpdateImg: failed to save image for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
-		return
-	}
-	if log != nil {
-		log.Info(fmt.Sprintf("HandleUpdateImg: image updated for user %s", user.ID))
-	}
-	handler.RespondWithJson(w, http.StatusOK, filepath)
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +170,6 @@ func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
-	frontUrl := config.GetConfig().Frontend_Url
 	log, _ := logger.GetLogger()
 	param := model.CreateUser{}
 	decoder := json.NewDecoder(r.Body)
@@ -231,21 +189,10 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
-	var socialLinks json.RawMessage
-	if param.Social != nil {
-		socialLinks = *param.Social
-	}
-	imgUrl := fmt.Sprintf("%s/default.jpeg", frontUrl)
 	userParam := database.CreateUserParams{
-		Name:        param.Name,
-		Email:       param.Email,
-		Password:    hashPass,
-		Batch:       param.Batch,
-		Image:       utlis.ToNilStr(&imgUrl),
-		Description: utlis.ToNilStr(&param.Description),
-		Status:      database.AccountStatusPending,
-		Role:        database.UserRoleUser,
-		Column10:    socialLinks,
+		Name:     param.Name,
+		Email:    param.Email,
+		Password: hashPass,
 	}
 	fmt.Println(userParam)
 	user, err := h.Repo.CreateUser(r.Context(), userParam)
@@ -309,6 +256,7 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	req := model.PatchUserProfileRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&req)
+	fmt.Println(&req)
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleUpdateUserProfile: failed to decode request body: %v", err))
@@ -318,9 +266,12 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 	}
 	params := database.PatchUserProfileParams{
 		ID:          userId,
-		Name:        utlis.ToNilStr(req.Name),
+		Username:    utlis.ToNilStr(req.UserName),
 		Email:       utlis.ToNilStr(req.Email),
+		Image:       utlis.ToNilStr(req.Image),
+		BannerImage: utlis.ToNilStr(req.Banner_image),
 		Batch:       utlis.ToNilStr(req.Batch),
+
 		Description: utlis.ToNilStr(req.Desc),
 	}
 	if req.Social != nil {
@@ -346,85 +297,6 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 		log.Info(fmt.Sprintf("HandleUpdateUserProfile: profile updated for user %s", userId))
 	}
 	handler.RespondWithJson(w, http.StatusOK, updatedUser)
-}
-
-func (h *Handler) HandleImageChange(w http.ResponseWriter, r *http.Request) {
-	log, _ := logger.GetLogger()
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		if log != nil {
-			log.Error("HandleImageChange: unauthenticated request")
-		}
-		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
-		return
-	}
-	err := r.ParseMultipartForm(20 << 20)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleImageChange: failed to parse multipart form for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Failed to parse form data")
-		return
-	}
-	path := fmt.Sprintf("uploads/%s", user.ID.String())
-	params := database.PatchUserImagesParams{
-		ID: user.ID,
-	}
-	hasUpdate := false
-
-	userfile, _, err := r.FormFile("user_image")
-	if err == nil && userfile != nil {
-		defer userfile.Close()
-		userImageFilePath, saveErr := utlis.SaveLocal(userfile, "user", path)
-		if saveErr != nil {
-			if log != nil {
-				log.Error(fmt.Sprintf("HandleImageChange: failed to save user image for user %s: %v", user.ID, saveErr))
-			}
-			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save profile image")
-			return
-		}
-		params.Image = utlis.ToNilStr(&userImageFilePath)
-		hasUpdate = true
-	}
-
-	bannerFile, _, err := r.FormFile("banner_image")
-	if err == nil && bannerFile != nil {
-		defer bannerFile.Close()
-		bannerImageFilePath, saveErr := utlis.SaveLocal(bannerFile, "banner_image", path)
-		if saveErr != nil {
-			if log != nil {
-				log.Error(fmt.Sprintf("HandleImageChange: failed to save banner image for user %s: %v", user.ID, saveErr))
-			}
-			handler.RespondWithError(w, http.StatusInternalServerError, "Failed to save banner image")
-			return
-		}
-		params.BannerImage = utlis.ToNilStr(&bannerImageFilePath)
-		hasUpdate = true
-	}
-
-	if !hasUpdate {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleImageChange: no image provided in request for user %s", user.ID))
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "At least one image (user_image or banner_image) is required")
-		return
-	}
-	res, err := h.Repo.PatchUserImages(r.Context(), params)
-	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
-			return
-		}
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleImageChange: failed to update images for user %s: %v", user.ID, err))
-		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to update images")
-		return
-	}
-	if log != nil {
-		log.Info(fmt.Sprintf("HandleImageChange: images updated for user %s", user.ID))
-	}
-	handler.RespondWithJson(w, http.StatusOK, res)
 }
 
 func (h *Handler) HandlePasswordChange(w http.ResponseWriter, r *http.Request) {
@@ -504,6 +376,33 @@ func (h *Handler) HandleGetAllUser(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 
 	user, err := h.Repo.GetAllUser(r.Context())
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	if log != nil {
+		log.Info("HandleGetAllUser: successfully")
+	}
+	handler.RespondWithJson(w, http.StatusOK, user)
+}
+func (h *Handler) HandleGetUserByUserName(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	username := chi.URLParam(r, "user-name")
+	if username == "" {
+		if log != nil {
+			log.Error("HandleGetUserByUserName: Failed to get All User:")
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	userName := sql.NullString{
+		String: username,
+		Valid:  true,
+	}
+	user, err := h.Repo.GetUserByUsername(r.Context(), userName)
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))

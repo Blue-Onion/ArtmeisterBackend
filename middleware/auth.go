@@ -23,7 +23,8 @@ type User struct {
 	ID          uuid.UUID
 	Name        string
 	Email       string
-	Batch       string
+	UserName    sql.NullString
+	Batch       sql.NullString
 	Status      database.AccountStatus
 	Role        database.UserRole
 	Image       sql.NullString
@@ -72,6 +73,7 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 		user := User{
 			ID:          dbUser.ID,
 			Name:        dbUser.Name,
+			UserName:    dbUser.Username,
 			Email:       dbUser.Email,
 			Batch:       dbUser.Batch,
 			Status:      dbUser.Status,

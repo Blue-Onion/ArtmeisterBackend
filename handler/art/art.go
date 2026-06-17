@@ -1,16 +1,17 @@
 package art
 
 import (
+	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
+	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 type Handler struct {
@@ -28,6 +29,7 @@ type profile struct {
 
 func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
+
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
 		if log != nil {
@@ -36,58 +38,102 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
-	name := r.FormValue("name")
-	if len(name) < 3 {
+
+	if user.Status != database.AccountStatusApproved {
 		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: art name too short for user %s: '%s'", user.ID, name))
+			log.Error(fmt.Sprintf(
+				"HandleArtCreation: user %s (%s) is not approved",
+				user.ID,
+				user.Name,
+			))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
+		handler.RespondWithError(w, http.StatusBadRequest, "User not approved")
 		return
 	}
 
-	url := r.FormValue("url")
-	if len(url) < 3 {
-
-		if log != nil {
-			log.Error("HandleArtCreation: Invalid Url")
-		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Url")
-		return
-	}
-	desc := r.FormValue("description")
-	tags := r.MultipartForm.Value["tags"]
-	err := r.ParseMultipartForm(10 << 20)
+	req := model.CreateArtRequest{}
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-
-		handler.RespondWithError(w, http.StatusBadRequest, "Invalid form data")
-
+		if log != nil {
+			log.Error(fmt.Sprintf(
+				"HandleArtCreation: invalid JSON body from user %s: %v",
+				user.ID,
+				err,
+			))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid JSON body")
 		return
+	}
 
+	if len(req.Name) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf(
+				"HandleArtCreation: art name too short for user %s: '%s'",
+				user.ID,
+				req.Name,
+			))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "Name is too short")
+		return
 	}
-	if tags == nil {
-		tags = []string{}
+
+	if len(req.URL) < 3 {
+		if log != nil {
+			log.Error(fmt.Sprintf(
+				"HandleArtCreation: invalid URL for user %s: '%s'",
+				user.ID,
+				req.URL,
+			))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid URL")
+		return
 	}
+
+	if req.Tags == nil {
+		req.Tags = []string{}
+	}
+
 	id := uuid.New()
 
 	params := database.CreateArtParams{
 		ID:          id,
-		Name:        name,
-		Description: utlis.ToNilStr(&desc),
-		Tags:        tags,
+		Name:        req.Name,
+		Description: utlis.ToNilStr(req.Description),
+		Tags:        req.Tags,
 		UserID:      user.ID,
-		Image:       url,
+		Image:       req.URL,
 	}
+
+	if log != nil {
+		log.Info(fmt.Sprintf(
+			"HandleArtCreation: creating art %s for user %s",
+			id,
+			user.ID,
+		))
+	}
+
 	art, err := h.Repo.CreateArt(r.Context(), params)
 	if err != nil {
 		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtCreation: failed to create art for user %s: %v", user.ID, err))
+			log.Error(fmt.Sprintf(
+				"HandleArtCreation: failed to create art %s for user %s: %v",
+				id,
+				user.ID,
+				err,
+			))
 		}
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	if log != nil {
-		log.Info(fmt.Sprintf("HandleArtCreation: art %s created by user %s", id, user.ID))
+		log.Info(fmt.Sprintf(
+			"HandleArtCreation: art %s created successfully by user %s",
+			id,
+			user.ID,
+		))
 	}
+
 	handler.RespondWithJson(w, http.StatusOK, art)
 }
 func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +175,41 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
+	artid := chi.URLParam(r, "id")
+	if artid == "" {
+		if log != nil {
+			log.Error("HandleGetArts: user ID is empty")
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		return
+	}
+
+	id, err := uuid.Parse(artid)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("userId=%q err=%v", artid, err))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	arts, err := h.Repo.GetArtByID(r.Context(), id)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
+		return
+	}
+	if log != nil {
+		log.Info(fmt.Sprintf("HandleGetArts: retrieved arts for user %s successfully", id))
+	}
+	fmt.Println("Got here 1")
+	handler.RespondWithJson(w, http.StatusOK, arts)
+}
+func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
 	Id := chi.URLParam(r, "id")
+	usrId := chi.URLParam(r, "user_id")
 	if Id == "" {
 		if log != nil {
 			log.Error("HandleGetArtById: art ID is empty")
@@ -145,7 +225,20 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	art, err := h.Repo.GetArtByID(r.Context(), artId)
+	userId, err := uuid.Parse(usrId)
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid user ID format '%s': %v", userId, err))
+		}
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	params := database.GetArtProfileByIDParams{
+		ID:     artId,
+		UserID: userId,
+	}
+	art, err := h.Repo.GetArtProfileByID(r.Context(), params)
+
 	if err != nil {
 		if utlis.IsNotFound(err) {
 			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
@@ -244,30 +337,29 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	name := r.FormValue("name")
-	if len(name) < 3 {
+	params := database.UpdateArtParams{
+		ID:     artId,
+		UserID: user.ID,
+	}
+	req := model.UpdateArtRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&req)
+	if err != nil {
 		if log != nil {
-			log.Error(fmt.Sprintf("HandlerArtUpdation: art name too short for user %s: '%s'", user.ID, name))
+			log.Error(fmt.Sprintf("HandlerArtUpdation: invalid req format '%s' for user %s: %v", id, user.ID, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Name is too Short")
+		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	desc := r.FormValue("description")
-	var tags []string
-	if r.MultipartForm != nil {
-		tags = r.MultipartForm.Value["tags"]
-	}
-	if tags == nil {
-		tags = []string{}
+	params.Name = utlis.ToNilStr(req.Name)
+	params.Description = utlis.ToNilStr(req.Description)
+	if req.Tags != nil {
+		params.Tags = *req.Tags
+	} else {
+		params.Tags = nil
+
 	}
 
-	params := database.UpdateArtParams{
-		ID:          artId,
-		UserID:      user.ID,
-		Name:        name,
-		Tags:        tags,
-		Description: utlis.ToNilStr(&desc),
-	}
 	updatedWork, err := h.Repo.UpdateArt(r.Context(), params)
 	if err != nil {
 		if utlis.IsNotFound(err) {

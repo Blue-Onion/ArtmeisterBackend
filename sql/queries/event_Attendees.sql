@@ -34,3 +34,11 @@ FROM events e
 JOIN event_attendees ea ON ea.event_id = e.id
 WHERE ea.user_id = $1
 ORDER BY e.event_date ASC;
+
+-- name: GetMyEventById :one
+SELECT e.*
+FROM events e
+JOIN event_attendees ea ON ea.event_id = e.id
+WHERE ea.user_id = $1
+AND ea.event_id = $2
+LIMIT 1;
