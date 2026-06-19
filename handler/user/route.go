@@ -17,6 +17,8 @@ func UserRouter(userHandler *Handler, middlewareHandler *middleware.Handler) *ch
 	// Protected routes
 	auth := middlewareHandler.MiddlewareAuth
 	admin := middlewareHandler.MiddlewareAdminAuth
+
+	r.Get("/main-users", http.HandlerFunc(userHandler.HandleGetAllUser))
 	r.Get("/users", admin(http.HandlerFunc(userHandler.HandleGetAllUser)))
 	r.Patch("/users/{id}", auth(http.HandlerFunc(userHandler.HandleUpdateUserProfile)))
 	r.Get("/users/{id}", userHandler.HandleGetUserById)

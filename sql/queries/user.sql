@@ -58,6 +58,22 @@ SELECT
     created_at,
     updated_at
 FROM users;
+-- name: GetAllUserApproved :many
+SELECT 
+    id,
+    name,
+    username,
+    email,
+    batch,
+    status,
+    role,
+    image,
+    banner_image,
+    description,
+    social_links,
+    created_at,
+    updated_at
+FROM users WHERE status='approved';
 
 
 -- name: GetUserByEmail :one

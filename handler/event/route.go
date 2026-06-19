@@ -19,7 +19,7 @@ func EventRouter(eventHandler *EventHandler, attendeeHandler *EventAttendeeHandl
 
 	// Protected routes (require user authentication)
 	r.Post("/{id}/join", auth(http.HandlerFunc(attendeeHandler.HandleJoinEvent)))
-	r.Get("/{id}", auth(http.HandlerFunc(attendeeHandler.HandleGetMyEvent)))
+	r.Get("/u/{id}", auth(http.HandlerFunc(attendeeHandler.HandleGetMyEvent)))
 	r.Delete("/{id}/attendee/{user_id}", auth(http.HandlerFunc(attendeeHandler.HandleDeleteEventAttendee)))
 	r.Get("/{id}/attendees", auth(http.HandlerFunc(attendeeHandler.HandleAllEventAttendee)))
 

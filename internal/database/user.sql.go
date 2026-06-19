@@ -154,6 +154,77 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]GetAllUserRow, error) {
 	return items, nil
 }
 
+const getAllUserApproved = `-- name: GetAllUserApproved :many
+SELECT 
+    id,
+    name,
+    username,
+    email,
+    batch,
+    status,
+    role,
+    image,
+    banner_image,
+    description,
+    social_links,
+    created_at,
+    updated_at
+FROM users WHERE status='approved'
+`
+
+type GetAllUserApprovedRow struct {
+	ID          uuid.UUID
+	Name        string
+	Username    sql.NullString
+	Email       string
+	Batch       sql.NullString
+	Status      AccountStatus
+	Role        UserRole
+	Image       sql.NullString
+	BannerImage sql.NullString
+	Description sql.NullString
+	SocialLinks json.RawMessage
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (q *Queries) GetAllUserApproved(ctx context.Context) ([]GetAllUserApprovedRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUserApproved)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllUserApprovedRow
+	for rows.Next() {
+		var i GetAllUserApprovedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Username,
+			&i.Email,
+			&i.Batch,
+			&i.Status,
+			&i.Role,
+			&i.Image,
+			&i.BannerImage,
+			&i.Description,
+			&i.SocialLinks,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUser = `-- name: GetUser :one
 SELECT 
     id,

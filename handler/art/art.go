@@ -437,3 +437,22 @@ func (h *Handler) HandleGetPendingArt(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
+func (h *Handler) HandleGetApprovedArt(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	arts, err := h.Repo.ListArt(r.Context())
+	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			return
+		}
+		if log != nil {
+			log.Error("HandleGetPendingArt: err Occurred")
+		}
+		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		return
+	}
+	if log != nil {
+		log.Info("HandleGetPendingArt: retrieved art")
+	}
+	handler.RespondWithJson(w, http.StatusOK, arts)
+}

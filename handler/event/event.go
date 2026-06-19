@@ -291,6 +291,7 @@ func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Re
 }
 func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
+
 	user_id := chi.URLParam(r, "user_id")
 	userId, err := uuid.Parse(user_id)
 	if err != nil {

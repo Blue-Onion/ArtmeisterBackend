@@ -15,6 +15,7 @@ type UserRepository interface {
 	PatchUserProfile(ctx context.Context, arg PatchUserProfileParams) (PatchUserProfileRow, error)
 	PatchUserAdmin(ctx context.Context, arg PatchUserAdminParams) (PatchUserAdminRow, error)
 	GetUserByUsername(ctx context.Context, username sql.NullString) (GetUserByUsernameRow, error)
+	GetAllUserApproved(ctx context.Context) ([]GetAllUserApprovedRow, error)
 	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (PatchUserPasswordRow, error)
 }
 type ArtRepository interface {

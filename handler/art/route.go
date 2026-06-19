@@ -23,7 +23,7 @@ func ArtRouter(artHandler *Handler, artMetadataHandler *artmetadata.Handler, mid
 	r.Get("/{id}/comments", artMetadataHandler.HandleGetArtComments)
 	r.Get("/{id}/comments/count", artMetadataHandler.HandleGetArtCommentsCount)
 	r.Get("/{id}/likes/count", artMetadataHandler.HandleGetArtLikeCount)
-
+	r.Get("/art", artHandler.HandleGetApprovedArt)
 	// Protected routes (require user authentication)
 	r.Post("/", auth(http.HandlerFunc(artHandler.HandleArtCreation)))
 	r.Delete("/{id}", auth(http.HandlerFunc(artHandler.HandleArtDeletion)))
