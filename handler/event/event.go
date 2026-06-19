@@ -375,6 +375,11 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 	}
 	res, err := h.Repo.GetMyEventById(r.Context(), params)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
+		}
+
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: failed to list attendees for event %s: %v", event_id, err))
 		}

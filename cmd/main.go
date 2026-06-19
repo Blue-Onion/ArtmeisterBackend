@@ -74,6 +74,7 @@ func main() {
 		MaxAge:           300,
 	}))
 	router.Use(middleware.MiddlewareLogger)
+	router.Use(middleware.MiddlewareRateLimit)
 	router.Get("/health", handler.Health)
 	router.Get("/", handler.MainPage)
 
