@@ -391,3 +391,45 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 	}
 	handler.RespondWithJson(w, http.StatusOK, res)
 }
+
+func (h *EventAttendeeHandler) HandleGetMyAllEvent(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	user, _ := middleware.GetUser(r.Context())
+
+	res, err := h.Repo.ListMyEvents(r.Context(), user.ID)
+	if err != nil {
+		if utlis.IsNotFound(err) {
+			if log != nil {
+				log.Info(fmt.Sprintf(
+					"HandleGetMyAllEvent: no events found for user %s",
+					user.ID,
+				))
+			}
+			handler.RespondWithJson(w, http.StatusOK, []string{})
+			return
+		}
+
+		if log != nil {
+			log.Error(fmt.Sprintf(
+				"HandleGetMyAllEvent: failed to list events for user %s: %v",
+				user.ID, err,
+			))
+		}
+
+		handler.RespondWithError(
+			w,
+			http.StatusInternalServerError,
+			"Failed to list user events",
+		)
+		return
+	}
+
+	if log != nil {
+		log.Info(fmt.Sprintf(
+			"HandleGetMyAllEvent: retrieved %d events for user %s successfully",
+			len(res), user.ID,
+		))
+	}
+
+	handler.RespondWithJson(w, http.StatusOK, res)
+}
