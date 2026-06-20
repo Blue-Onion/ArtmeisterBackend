@@ -126,19 +126,15 @@ func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetEventById: invalid ID format '%s': %v", id, err))
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	res, err := h.Repo.GetEventByID(r.Context(), eventId)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetEventById: failed to get event %s: %v", eventId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get event")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -153,7 +149,7 @@ func (h *EventHandler) HandleGetAllEvent(w http.ResponseWriter, r *http.Request)
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetAllEvent: failed to list events: %v", err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list events")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -322,7 +318,7 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: invalid event ID format '%s': %v", id, err))
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
@@ -331,7 +327,7 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: failed to list attendees for event %s: %v", event_id, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -349,7 +345,7 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: invalid event ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Event Id")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	params := database.GetMyEventByIdParams{
@@ -358,15 +354,10 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 	}
 	res, err := h.Repo.GetMyEventById(r.Context(), params)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
-
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: failed to list attendees for event %s: %v", event_id, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to list event attendees")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -381,29 +372,13 @@ func (h *EventAttendeeHandler) HandleGetMyAllEvent(w http.ResponseWriter, r *htt
 
 	res, err := h.Repo.ListMyEvents(r.Context(), user.ID)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			if log != nil {
-				log.Info(fmt.Sprintf(
-					"HandleGetMyAllEvent: no events found for user %s",
-					user.ID,
-				))
-			}
-			handler.RespondWithJson(w, http.StatusOK, []string{})
-			return
-		}
-
 		if log != nil {
 			log.Error(fmt.Sprintf(
 				"HandleGetMyAllEvent: failed to list events for user %s: %v",
 				user.ID, err,
 			))
 		}
-
-		handler.RespondWithError(
-			w,
-			http.StatusInternalServerError,
-			"Failed to list user events",
-		)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 

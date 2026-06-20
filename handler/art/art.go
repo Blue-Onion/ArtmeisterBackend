@@ -143,7 +143,7 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error("HandleGetArts: user ID is empty")
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	id, err := uuid.Parse(userId)
@@ -151,20 +151,16 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("userId=%q err=%v", userId, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	fmt.Println("Got here")
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-
-			handler.RespondWithJson(w, http.StatusOK, nil)
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -179,7 +175,7 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error("HandleGetArts: user ID is empty")
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 
@@ -188,20 +184,15 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("userId=%q err=%v", artid, err))
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	arts, err := h.Repo.GetArtByID(r.Context(), id)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get user arts")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -210,34 +201,34 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Got here")
 	log, _ := logger.GetLogger()
 	Id := chi.URLParam(r, "id")
 	usrId := chi.URLParam(r, "user_id")
 	if Id == "" {
+		fmt.Println("Error here 1")
 		if log != nil {
 			log.Error("HandleGetArtById: art ID is empty")
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	artId, err := uuid.Parse(Id)
 	if err != nil {
+		fmt.Println("Error here 2")
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	userId, err := uuid.Parse(usrId)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
+		fmt.Println("Error here 3")
 		if log != nil {
-			log.Error(fmt.Sprintf("HandleGetArtById: invalid user ID format '%s': %v", userId, err))
+			log.Error(fmt.Sprintf("HandleGetArtById: invalid user ID format '%s': %v", usrId, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	params := database.GetArtProfileByIDParams{
@@ -247,14 +238,12 @@ func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request
 	art, err := h.Repo.GetArtProfileByID(r.Context(), params)
 
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
+
+		fmt.Println("Error here 3")
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: failed to get art %s: %v", artId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -383,7 +372,7 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 		if log != nil {
 			log.Error("HandleGetArts: user ID is empty")
 		}
-		handler.RespondWithJson(w, http.StatusOK, nil)
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	Id, err := uuid.Parse(userId)
@@ -391,31 +380,23 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	user, err := h.UserRepo.GetUser(r.Context(), Id)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
-		handler.RespondWithError(w, http.StatusNotFound, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	artWork, err := h.ArtRepo.GetArtByUser(r.Context(), Id)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
-		handler.RespondWithError(w, http.StatusNotFound, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	res := profile{
@@ -428,14 +409,10 @@ func (h *Handler) HandleGetPendingArt(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	arts, err := h.Repo.ListPendingArt(r.Context())
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error("HandleGetPendingArt: err Occurred")
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -447,14 +424,10 @@ func (h *Handler) HandleGetApprovedArt(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
 	arts, err := h.Repo.ListArt(r.Context())
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error("HandleGetPendingArt: err Occurred")
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {

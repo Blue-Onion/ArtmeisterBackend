@@ -27,7 +27,7 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtComments: invalid art ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	comments, err := h.Repo.GetArtCommentsByArtID(r.Context(), artId)
@@ -35,7 +35,7 @@ func (h *Handler) HandleGetArtComments(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtComments: failed to get comments for art %s: %v", artId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -51,7 +51,7 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtCommentsCount: invalid art ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	commentsCount, err := h.Repo.GetArtCommentsCount(r.Context(), artId)
@@ -59,7 +59,7 @@ func (h *Handler) HandleGetArtCommentsCount(w http.ResponseWriter, r *http.Reque
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtCommentsCount: failed for art %s: %v", artId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get comments count")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -75,7 +75,7 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtLikeCount: invalid art ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	likeCount, err := h.Repo.GetArtLikesCount(r.Context(), artId)
@@ -83,7 +83,7 @@ func (h *Handler) HandleGetArtLikeCount(w http.ResponseWriter, r *http.Request) 
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtLikeCount: failed for art %s: %v", artId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get likes count")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {

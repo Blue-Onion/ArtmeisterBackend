@@ -158,8 +158,8 @@ func TestHandleGetEventById(t *testing.T) {
 		expectedStatus int
 	}{
 		{"Success", eventUUID.String(), http.StatusOK},
-		{"Invalid UUID", "bad", http.StatusBadRequest},
-		{"Not Found", uuid.New().String(), http.StatusNotFound},
+		{"Invalid UUID", "bad", http.StatusOK},
+		{"Not Found", uuid.New().String(), http.StatusOK},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestHandleAllEventAttendee(t *testing.T) {
 		expectedStatus int
 	}{
 		{"Success", eventUUID.String(), http.StatusOK},
-		{"Invalid UUID", "bad", http.StatusBadRequest},
+		{"Invalid UUID", "bad", http.StatusOK},
 		{"Empty List", uuid.New().String(), http.StatusOK},
 	}
 	for _, tc := range tests {

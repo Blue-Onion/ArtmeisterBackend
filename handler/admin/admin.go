@@ -61,9 +61,7 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 }
 func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
-	fmt.Println("Got Here")
 	userID := chi.URLParam(r, "user_id")
-	fmt.Println(userID)
 	id, err := uuid.Parse(userID)
 	if err != nil {
 		if log != nil {
@@ -93,7 +91,6 @@ func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if status != "" {
-
 		params.Status = database.NullAccountStatus{
 			AccountStatus: database.AccountStatus(status),
 			Valid:         true,

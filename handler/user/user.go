@@ -30,20 +30,15 @@ func (h *Handler) HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArts: invalid user ID format '%s': %v", userId, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	user, err := h.Repo.GetUser(r.Context(), userId)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
-
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetUserById: failed to get art %s: %v", userId, err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -124,28 +119,24 @@ func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
 			handler.RespondWithJson(w, http.StatusOK, nil)
 			return
 		}
-		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: login required")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	userId, err := utlis.GetUserIdJwt(tokenCookie)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: invalid or expired token")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 
 	id, err := uuid.Parse(userId)
 	if err != nil {
-		handler.RespondWithError(w, http.StatusBadRequest, "Invalid user ID format")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 
 	user, err := h.Repo.GetUser(r.Context(), id)
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
-			return
-		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	handler.RespondWithJson(w, 200, user)
@@ -378,14 +369,10 @@ func (h *Handler) HandleGetAllUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Repo.GetAllUser(r.Context())
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -400,7 +387,7 @@ func (h *Handler) HandleGetUserByUserName(w http.ResponseWriter, r *http.Request
 		if log != nil {
 			log.Error("HandleGetUserByUserName: Failed to get All User:")
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	userName := sql.NullString{
@@ -408,15 +395,11 @@ func (h *Handler) HandleGetUserByUserName(w http.ResponseWriter, r *http.Request
 		Valid:  true,
 	}
 	user, err := h.Repo.GetUserByUsername(r.Context(), userName)
-	if utlis.IsNotFound(err) {
-		handler.RespondWithJson(w, http.StatusOK, nil)
-		return
-	}
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
@@ -428,14 +411,10 @@ func (h *Handler) HandleGetApprovedUser(w http.ResponseWriter, r *http.Request) 
 	log, _ := logger.GetLogger()
 	user, err := h.Repo.GetAllUserApproved(r.Context())
 	if err != nil {
-		if utlis.IsNotFound(err) {
-			handler.RespondWithJson(w, http.StatusOK, nil)
-			return
-		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
 		}
-		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to get art")
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
 		return
 	}
 	if log != nil {
