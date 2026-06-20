@@ -116,16 +116,6 @@ func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request)
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
-	path := fmt.Sprintf("%s", id)
-	err = utlis.DeleteLocal(path)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleDeleteEvent: failed to delete local files for event %s: %v", id, err))
-		}
-	}
-	if log != nil {
-		log.Info(fmt.Sprintf("HandleDeleteEvent: event %s deleted", eventId))
-	}
 	handler.RespondWithJson(w, http.StatusOK, "ok")
 }
 func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request) {
@@ -136,13 +126,13 @@ func (h *EventHandler) HandleGetEventById(w http.ResponseWriter, r *http.Request
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetEventById: invalid ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Id")
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	res, err := h.Repo.GetEventByID(r.Context(), eventId)
 	if err != nil {
 		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusNotFound, "Event not found")
+			handler.RespondWithJson(w, http.StatusOK, nil)
 			return
 		}
 		if log != nil {
@@ -253,14 +243,7 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 }
 func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		if log != nil {
-			log.Error("HandleJoinEvent: unauthenticated request")
-		}
-		handler.RespondWithError(w, http.StatusUnauthorized, "Not Authorized")
-		return
-	}
+	user, _ := middleware.GetUser(r.Context())
 	userId := user.ID
 	id := chi.URLParam(r, "id")
 	event_id, err := uuid.Parse(id)
@@ -339,7 +322,7 @@ func (h *EventAttendeeHandler) HandleAllEventAttendee(w http.ResponseWriter, r *
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: invalid event ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	res, err := h.Repo.ListEventAttendees(r.Context(), event_id)
@@ -366,7 +349,7 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleAllEventAttendee: invalid event ID format '%s': %v", id, err))
 		}
-		handler.RespondWithError(w, 400, err.Error())
+		handler.RespondWithError(w, http.StatusBadRequest, "Invalid Event Id")
 		return
 	}
 	params := database.GetMyEventByIdParams{

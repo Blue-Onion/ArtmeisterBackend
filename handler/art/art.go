@@ -146,10 +146,6 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
-	fmt.Printf("userId raw = %q\n", userId)
-
-	fmt.Printf("userId len = %d\n", len(userId))
-
 	id, err := uuid.Parse(userId)
 	if err != nil {
 		if log != nil {
@@ -161,6 +157,10 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Got here")
 	arts, err := h.Repo.GetArtByUser(r.Context(), id)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+
+			handler.RespondWithJson(w, http.StatusOK, nil)
+		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
 		}
@@ -170,7 +170,6 @@ func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleGetArts: retrieved arts for user %s successfully", id))
 	}
-	fmt.Println("Got here 1")
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
@@ -180,7 +179,7 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error("HandleGetArts: user ID is empty")
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 
@@ -189,11 +188,16 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 		if log != nil {
 			log.Error(fmt.Sprintf("userId=%q err=%v", artid, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	arts, err := h.Repo.GetArtByID(r.Context(), id)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
+		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArts: failed to get arts for user %s: %v", id, err))
 		}
@@ -203,7 +207,6 @@ func (h *Handler) HandleGetArtById(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleGetArts: retrieved arts for user %s successfully", id))
 	}
-	fmt.Println("Got here 1")
 	handler.RespondWithJson(w, http.StatusOK, arts)
 }
 func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +217,7 @@ func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request
 		if log != nil {
 			log.Error("HandleGetArtById: art ID is empty")
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "Art ID is required")
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	artId, err := uuid.Parse(Id)
@@ -222,11 +225,15 @@ func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, err.Error())
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	userId, err := uuid.Parse(usrId)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
+		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid user ID format '%s': %v", userId, err))
 		}
@@ -241,7 +248,7 @@ func (h *Handler) HandleGetArtProfileById(w http.ResponseWriter, r *http.Request
 
 	if err != nil {
 		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			handler.RespondWithJson(w, http.StatusOK, nil)
 			return
 		}
 		if log != nil {
@@ -265,7 +272,6 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 		handler.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 		return
 	}
-	userId := user.ID.String()
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		if log != nil {
@@ -297,13 +303,6 @@ func (h *Handler) HandleArtDeletion(w http.ResponseWriter, r *http.Request) {
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to delete art")
 		return
-	}
-	path := fmt.Sprintf("%s/art/%s.png", userId, id)
-	err = utlis.DeleteLocal(path)
-	if err != nil {
-		if log != nil {
-			log.Error(fmt.Sprintf("HandleArtDeletion: failed to delete local file for art %s: %v", id, err))
-		}
 	}
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleArtDeletion: art %s deleted by user %s", artId, user.ID))
@@ -384,7 +383,7 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 		if log != nil {
 			log.Error("HandleGetArts: user ID is empty")
 		}
-		handler.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		handler.RespondWithJson(w, http.StatusOK, nil)
 		return
 	}
 	Id, err := uuid.Parse(userId)
@@ -397,6 +396,10 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 	}
 	user, err := h.UserRepo.GetUser(r.Context(), Id)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
+		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
@@ -405,6 +408,10 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 	}
 	artWork, err := h.ArtRepo.GetArtByUser(r.Context(), Id)
 	if err != nil {
+		if utlis.IsNotFound(err) {
+			handler.RespondWithJson(w, http.StatusOK, nil)
+			return
+		}
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleGetArtById: invalid art ID format '%s': %v", Id, err))
 		}
@@ -415,7 +422,6 @@ func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.
 		User: user,
 		Art:  artWork,
 	}
-	fmt.Println(res)
 	handler.RespondWithJson(w, 200, res)
 }
 func (h *Handler) HandleGetPendingArt(w http.ResponseWriter, r *http.Request) {
@@ -423,7 +429,7 @@ func (h *Handler) HandleGetPendingArt(w http.ResponseWriter, r *http.Request) {
 	arts, err := h.Repo.ListPendingArt(r.Context())
 	if err != nil {
 		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			handler.RespondWithJson(w, http.StatusOK, nil)
 			return
 		}
 		if log != nil {
@@ -442,7 +448,7 @@ func (h *Handler) HandleGetApprovedArt(w http.ResponseWriter, r *http.Request) {
 	arts, err := h.Repo.ListArt(r.Context())
 	if err != nil {
 		if utlis.IsNotFound(err) {
-			handler.RespondWithError(w, http.StatusNotFound, "Art not found")
+			handler.RespondWithJson(w, http.StatusOK, nil)
 			return
 		}
 		if log != nil {
