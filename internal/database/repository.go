@@ -54,7 +54,8 @@ type EventAttendeesRepository interface {
 	GetMyEventById(ctx context.Context, arg GetMyEventByIdParams) (Event, error)
 	CountEventAttendees(ctx context.Context, eventID uuid.UUID) (int32, error)
 	EnrollUserToEvent(ctx context.Context, arg EnrollUserToEventParams) (EventAttendee, error)
-	ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]User, error)
+	ListEventAttendees(ctx context.Context, eventID uuid.UUID) ([]ListEventAttendeesRow, error)
 	ListMyEvents(ctx context.Context, userID uuid.UUID) ([]Event, error)
+
 	RemoveUserFromEvent(ctx context.Context, arg RemoveUserFromEventParams) (uuid.UUID, error)
 }

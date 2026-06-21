@@ -15,12 +15,16 @@ RETURNING event_id;
 
 
 -- name: ListEventAttendees :many
-SELECT u.*
+SELECT 
+    u.id,
+    u.name,
+    u.username,
+    u.email,
+    u.image
 FROM users u
 JOIN event_attendees ea ON ea.user_id = u.id
 WHERE ea.event_id = $1
 ORDER BY ea.joined_at ASC;
-
 
 -- name: CountEventAttendees :one
 SELECT COUNT(*)::int
