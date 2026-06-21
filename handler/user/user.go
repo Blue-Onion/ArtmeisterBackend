@@ -150,8 +150,8 @@ func (h *Handler) HandleLogOut(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 	if log != nil {
 		log.Info("HandleLogOut: user logged out")
@@ -211,9 +211,9 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   3600 * 24,
-		SameSite: http.SameSiteLaxMode,
 	})
 
 	handler.RespondWithJson(w, http.StatusCreated, user)
