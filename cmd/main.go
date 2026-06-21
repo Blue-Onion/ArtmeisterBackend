@@ -97,7 +97,7 @@ func main() {
 
 	server := http.Server{
 		Handler: router,
-		Addr:    ":" + cfg.Port,
+		Addr:    "0.0.0.0:" + cfg.Port,
 	}
 
 	stop := make(chan os.Signal, 1)
