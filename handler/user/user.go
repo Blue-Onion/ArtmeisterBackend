@@ -96,9 +96,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   true,
 		MaxAge:   3600 * 24,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleLogin: user %s logged in successfully", user.ID))
