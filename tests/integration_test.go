@@ -51,6 +51,7 @@ func setupTestRouter(db *sql.DB, query *database.Queries) *chi.Mux {
 	userHandler := &user.Handler{Repo: query}
 	middlewareHandler := &middleware.Handler{Repo: query}
 	artHandler := &art.Handler{Repo: query}
+	artProfileHandler := &art.ProfileHandler{ArtRepo: query, UserRepo: query}
 	artMetadataHandler := &artmetadata.Handler{Repo: query}
 	eventHandler := &event.EventHandler{Repo: query}
 	eventAttendeeHandler := &event.EventAttendeeHandler{Repo: query}
@@ -59,7 +60,7 @@ func setupTestRouter(db *sql.DB, query *database.Queries) *chi.Mux {
 
 	// Mount routes
 	router.Mount("/auth", user.UserRouter(userHandler, middlewareHandler))
-	router.Mount("/art", art.ArtRouter(artHandler, artMetadataHandler, middlewareHandler))
+	router.Mount("/art", art.ArtRouter(artHandler, artMetadataHandler, middlewareHandler, artProfileHandler))
 	router.Mount("/event", event.EventRouter(eventHandler, eventAttendeeHandler, middlewareHandler))
 	router.Mount("/admin", admin.AdminRoute(userHandler, artHandler, middlewareHandler))
 
@@ -90,7 +91,6 @@ func TestIntegrationUserFlow(t *testing.T) {
 		Name:     "Integration User",
 		Email:    "integration@example.com",
 		Password: "strongpassword123",
-		Batch:    "2026",
 	}
 	bodyBytes, _ := json.Marshal(userCreds)
 	req := httptest.NewRequest(http.MethodPost, "/auth/users", bytes.NewReader(bodyBytes))
@@ -101,13 +101,13 @@ func TestIntegrationUserFlow(t *testing.T) {
 		t.Fatalf("expected status 201, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var createdUser database.CreateUserRow
-	if err := decodeEnvelope(w.Body.Bytes(), &createdUser); err != nil {
+	var createdUserResp map[string]string
+	if err := decodeEnvelope(w.Body.Bytes(), &createdUserResp); err != nil {
 		t.Fatalf("failed to decode user response: %v", err)
 	}
 
-	if createdUser.Email != userCreds.Email {
-		t.Errorf("expected email %s, got %s", userCreds.Email, createdUser.Email)
+	if createdUserResp["ID"] == "" {
+		t.Errorf("expected non-empty user ID in response")
 	}
 
 	// 2. Login
@@ -138,10 +138,10 @@ func TestIntegrationUserFlow(t *testing.T) {
 
 	// 3. Update Profile (Authorized)
 	updatePayload := model.PatchUserProfileRequest{
-		Name: strPtr("New Integration Name"),
+		UserName: strPtr("New Integration Name"),
 	}
 	updateBytes, _ := json.Marshal(updatePayload)
-	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/auth/users/%s", createdUser.ID), bytes.NewReader(updateBytes))
+	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/auth/users/%s", createdUserResp["ID"]), bytes.NewReader(updateBytes))
 	req.AddCookie(authCookie)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -186,9 +186,6 @@ func TestIntegrationArtFlow(t *testing.T) {
 		Name:     "Artist A",
 		Email:    "artist@example.com",
 		Password: hashedPwd,
-		Batch:    "2026",
-		Status:   database.AccountStatusApproved,
-		Role:     database.UserRoleUser,
 	})
 	loginBody, _ := json.Marshal(model.AuthenticateUser{
 		Email:    "artist@example.com",
@@ -223,35 +220,30 @@ func TestIntegrationArtFlow(t *testing.T) {
 		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var createdArt database.Art
-	if err := decodeEnvelope(w.Body.Bytes(), &createdArt); err != nil {
+	var createdArtResp map[string]string
+	if err := decodeEnvelope(w.Body.Bytes(), &createdArtResp); err != nil {
 		t.Fatalf("failed to decode art: %v", err)
 	}
 
-	if createdArt.Name != "Starry Night" {
-		t.Errorf("expected art name Starry Night, got %s", createdArt.Name)
-	}
-	if createdArt.Status != database.ArtStatusPending {
-		t.Errorf("expected art status pending, got %v", createdArt.Status)
+	createdArtID, err := uuid.Parse(createdArtResp["ID"])
+	if err != nil {
+		t.Fatalf("failed to parse created art ID: %v", err)
 	}
 
 	// Cleanup saved local file (uploads/userID/art/artID.png)
-	defer os.RemoveAll(fmt.Sprintf("uploads/%s", hashed.ID.String()))
+	defer os.RemoveAll(fmt.Sprintf("uploads/%s", hashed.String()))
 
 	// 2. Admin Approve Art
 	// Create Admin and Login
 	adminPwd := "adminpass"
 	adminHashedPwd, _ := utlis.HashPassword(adminPwd)
-	adminUser, _ := query.CreateUser(context.Background(), database.CreateUserParams{
+	query.CreateUser(context.Background(), database.CreateUserParams{
 		Name:     "Admin User",
 		Email:    "admin@example.com",
 		Password: adminHashedPwd,
-		Batch:    "Admin",
-		Status:   database.AccountStatusApproved,
-		Role:     database.UserRoleAdmin,
 	})
 	adminLoginBody, _ := json.Marshal(model.AuthenticateUser{
-		Email:    adminUser.Email,
+		Email:    "admin@example.com",
 		Password: adminPwd,
 	})
 	req = httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(adminLoginBody))
@@ -265,7 +257,7 @@ func TestIntegrationArtFlow(t *testing.T) {
 	adminCookie := adminCookies[0]
 
 	// Approve artwork
-	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/arts/%s/status?status=approved", createdArt.ID), nil)
+	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/arts/%s/status?status=approved", createdArtID), nil)
 	req.AddCookie(adminCookie)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -275,7 +267,7 @@ func TestIntegrationArtFlow(t *testing.T) {
 	}
 
 	// 3. Delete Art (Authorized)
-	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/art/%s", createdArt.ID), nil)
+	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/art/%s", createdArtID), nil)
 	req.AddCookie(cookie)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -285,7 +277,7 @@ func TestIntegrationArtFlow(t *testing.T) {
 	}
 
 	// Verify art is gone
-	_, err := query.GetArtByID(context.Background(), createdArt.ID)
+	_, err = query.GetArtByID(context.Background(), createdArtID)
 	if err != sql.ErrNoRows {
 		t.Errorf("expected art to be deleted, got error: %v", err)
 	}
@@ -321,9 +313,6 @@ func TestIntegrationEventConcurrency(t *testing.T) {
 			Name:     fmt.Sprintf("User %d", i),
 			Email:    email,
 			Password: hashedPwd,
-			Batch:    "2026",
-			Status:   database.AccountStatusApproved,
-			Role:     database.UserRoleUser,
 		})
 		if err != nil {
 			t.Fatalf("failed to create user %d: %v", i, err)

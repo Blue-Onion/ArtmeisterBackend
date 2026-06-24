@@ -21,42 +21,28 @@ type MockRepo struct {
 	Users []database.User
 }
 
-func (m *MockRepo) CreateUser(ctx context.Context, arg database.CreateUserParams) (database.CreateUserRow, error) {
+func (m *MockRepo) CreateUser(ctx context.Context, arg database.CreateUserParams) (uuid.UUID, error) {
 	now := time.Now()
-	user := database.User{
+	u := database.User{
 		ID:        uuid.New(),
 		Name:      arg.Name,
 		Email:     arg.Email,
 		Password:  arg.Password,
 		CreatedAt: now,
 		UpdatedAt: now,
-		Status:    arg.Status,
-		Role:      arg.Role,
 	}
-	m.Users = append(m.Users, user)
-	return database.CreateUserRow{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Status:    user.Status,
-		Role:      user.Role,
-	}, nil
+	m.Users = append(m.Users, u)
+	return u.ID, nil
 }
 
 func (m *MockRepo) GetUserByEmail(ctx context.Context, email string) (database.GetUserByEmailRow, error) {
 	for _, u := range m.Users {
 		if u.Email == email {
 			return database.GetUserByEmailRow{
-				ID:        u.ID,
-				Name:      u.Name,
-				Email:     u.Email,
-				Password:  u.Password,
-				CreatedAt: u.CreatedAt,
-				UpdatedAt: u.UpdatedAt,
-				Status:    u.Status,
-				Role:      u.Role,
+				ID:       u.ID,
+				Name:     u.Name,
+				Email:    u.Email,
+				Password: u.Password,
 			}, nil
 		}
 	}
@@ -85,12 +71,12 @@ func TestHandleCreateUser(t *testing.T) {
 
 	var response struct {
 		Success bool
-		Data    database.CreateUserRow
+		Data    map[string]string
 	}
 	json.NewDecoder(rr.Body).Decode(&response)
 
-	if response.Data.Name != userData.Name {
-		t.Errorf("handler returned unexpected body: got %v want %v", response.Data.Name, userData.Name)
+	if response.Data["ID"] == "" {
+		t.Errorf("expected non-empty ID in response")
 	}
 }
 
@@ -105,8 +91,6 @@ func TestHandleLogin(t *testing.T) {
 		Name:     "Test User",
 		Email:    "test@example.com",
 		Password: hash,
-		Status:   database.AccountStatusPending,
-		Role:     database.UserRoleUser,
 	}
 	mockRepo.CreateUser(context.Background(), userData)
 

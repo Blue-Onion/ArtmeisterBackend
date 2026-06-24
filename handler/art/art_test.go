@@ -1,8 +1,10 @@
 package art
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
 	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
+	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
@@ -24,9 +27,9 @@ type mockArtRepo struct {
 	deleteErr    error
 }
 
-func (m *mockArtRepo) CreateArt(ctx context.Context, arg database.CreateArtParams) (database.Art, error) {
+func (m *mockArtRepo) CreateArt(ctx context.Context, arg database.CreateArtParams) (uuid.UUID, error) {
 	if m.createErr != nil {
-		return database.Art{}, m.createErr
+		return uuid.UUID{}, m.createErr
 	}
 	a := database.Art{
 		ID:          arg.ID,
@@ -40,52 +43,65 @@ func (m *mockArtRepo) CreateArt(ctx context.Context, arg database.CreateArtParam
 		UpdatedAt:   time.Now(),
 	}
 	m.arts[arg.ID] = a
-	return a, nil
+	return arg.ID, nil
 }
 
-func (m *mockArtRepo) GetArtByID(ctx context.Context, id uuid.UUID) (database.Art, error) {
+func (m *mockArtRepo) GetArtByID(ctx context.Context, id uuid.UUID) (database.GetArtByIDRow, error) {
 	if m.getErr != nil {
-		return database.Art{}, m.getErr
+		return database.GetArtByIDRow{}, m.getErr
 	}
 	a, ok := m.arts[id]
 	if !ok {
-		return database.Art{}, sql.ErrNoRows
+		return database.GetArtByIDRow{}, sql.ErrNoRows
 	}
-	return a, nil
+	return database.GetArtByIDRow{
+		ID:          a.ID,
+		Name:        a.Name,
+		Description: a.Description,
+		Image:       a.Image,
+		Tags:        a.Tags,
+	}, nil
 }
 
-func (m *mockArtRepo) GetArtByUser(ctx context.Context, userID uuid.UUID) ([]database.Art, error) {
+func (m *mockArtRepo) GetArtByUser(ctx context.Context, userID uuid.UUID) ([]database.GetArtByUserRow, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
-	var res []database.Art
+	var res []database.GetArtByUserRow
 	for _, a := range m.arts {
 		if a.UserID == userID {
-			res = append(res, a)
+			res = append(res, database.GetArtByUserRow{
+				ID:          a.ID,
+				Name:        a.Name,
+				Description: a.Description,
+				Image:       a.Image,
+			})
 		}
 	}
 	return res, nil
 }
 
-func (m *mockArtRepo) UpdateArt(ctx context.Context, arg database.UpdateArtParams) (database.Art, error) {
+func (m *mockArtRepo) UpdateArt(ctx context.Context, arg database.UpdateArtParams) (uuid.UUID, error) {
 	if m.updateErr != nil {
-		return database.Art{}, m.updateErr
+		return uuid.UUID{}, m.updateErr
 	}
 	a, ok := m.arts[arg.ID]
 	if !ok {
-		return database.Art{}, sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	if a.UserID != arg.UserID {
-		return database.Art{}, sql.ErrNoRows // SQL update limits to user_id
+		return uuid.UUID{}, sql.ErrNoRows
 	}
-	a.Name = arg.Name
+	if arg.Name.Valid {
+		a.Name = arg.Name.String
+	}
 	a.Tags = arg.Tags
 	if arg.Description.Valid {
 		a.Description = arg.Description
 	}
 	a.UpdatedAt = time.Now()
 	m.arts[arg.ID] = a
-	return a, nil
+	return arg.ID, nil
 }
 
 func (m *mockArtRepo) DeleteArt(ctx context.Context, arg database.DeleteArtParams) (uuid.UUID, error) {
@@ -98,6 +114,10 @@ func (m *mockArtRepo) DeleteArt(ctx context.Context, arg database.DeleteArtParam
 	}
 	delete(m.arts, arg.ID)
 	return arg.ID, nil
+}
+
+type envelope struct {
+	Success bool
 }
 
 func newMockArtRepo() *mockArtRepo {
@@ -125,32 +145,38 @@ func TestHandleGetArtById(t *testing.T) {
 		artIDParam     string
 		mockErr        error
 		expectedStatus int
+		expectSuccess  bool
 	}{
 		{
 			name:           "Success Retrieve",
 			artIDParam:     artUUID.String(),
 			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
 		},
 		{
 			name:           "Invalid UUID Format",
 			artIDParam:     "bad-uuid",
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 		{
 			name:           "Non-existent Art",
 			artIDParam:     uuid.New().String(),
-			expectedStatus: http.StatusNotFound,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 		{
 			name:           "Empty ID Param",
 			artIDParam:     "",
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 		{
 			name:           "DB Error",
 			artIDParam:     artUUID.String(),
 			mockErr:        fmt.Errorf("connection refused"),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 	}
 
@@ -169,6 +195,15 @@ func TestHandleGetArtById(t *testing.T) {
 
 			if rr.Code != tc.expectedStatus {
 				t.Errorf("expected status %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
+			}
+			if tc.expectSuccess {
+				var env envelope
+				if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil {
+					t.Fatalf("failed to decode response: %v", err)
+				}
+				if !env.Success {
+					t.Errorf("expected success=true, got false")
+				}
 			}
 		})
 	}
@@ -191,32 +226,38 @@ func TestHandleGetArts(t *testing.T) {
 		userIDParam    string
 		mockErr        error
 		expectedStatus int
+		expectSuccess  bool
 	}{
 		{
 			name:           "Success List User Art",
 			userIDParam:    userUUID.String(),
 			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
 		},
 		{
 			name:           "Invalid User UUID",
 			userIDParam:    "bad-uuid",
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 		{
 			name:           "No Art for User (Empty List)",
 			userIDParam:    uuid.New().String(),
 			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
 		},
 		{
 			name:           "Empty User ID Param",
 			userIDParam:    "",
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 		{
 			name:           "DB Error",
 			userIDParam:    userUUID.String(),
 			mockErr:        fmt.Errorf("db error"),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
 		},
 	}
 
@@ -234,6 +275,15 @@ func TestHandleGetArts(t *testing.T) {
 
 			if rr.Code != tc.expectedStatus {
 				t.Errorf("expected status %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
+			}
+			if !tc.expectSuccess {
+				var env envelope
+				if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil {
+					t.Fatalf("failed to decode response: %v", err)
+				}
+				if env.Success {
+					t.Errorf("expected success=false, got true")
+				}
 			}
 		})
 	}
@@ -335,6 +385,8 @@ func TestHandleArtDeletion(t *testing.T) {
 	}
 }
 
+func strPtr(s string) *string { return &s }
+
 func TestHandlerArtUpdation(t *testing.T) {
 	repo := newMockArtRepo()
 	h := &Handler{Repo: repo}
@@ -353,8 +405,7 @@ func TestHandlerArtUpdation(t *testing.T) {
 		name           string
 		artIDParam     string
 		authCtxUser    *middleware.User // nil = unauthenticated
-		formDataName   string
-		formDataDesc   string
+		body           *model.UpdateArtRequest
 		expectedStatus int
 	}{
 		{
@@ -363,19 +414,8 @@ func TestHandlerArtUpdation(t *testing.T) {
 			authCtxUser: &middleware.User{
 				ID: userUUID,
 			},
-			formDataName:   "NewName",
-			formDataDesc:   "NewDescription",
+			body:           &model.UpdateArtRequest{Name: strPtr("NewName"), Description: strPtr("NewDescription")},
 			expectedStatus: http.StatusOK,
-		},
-		{
-			name:       "Name Too Short",
-			artIDParam: artUUID.String(),
-			authCtxUser: &middleware.User{
-				ID: userUUID,
-			},
-			formDataName:   "Hi",
-			formDataDesc:   "NewDescription",
-			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "Update Other User Art fails",
@@ -383,14 +423,14 @@ func TestHandlerArtUpdation(t *testing.T) {
 			authCtxUser: &middleware.User{
 				ID: uuid.New(),
 			},
-			formDataName:   "ValidName",
+			body:           &model.UpdateArtRequest{Name: strPtr("ValidName")},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Unauthenticated Update",
 			artIDParam:     artUUID.String(),
 			authCtxUser:    nil,
-			formDataName:   "ValidName",
+			body:           &model.UpdateArtRequest{Name: strPtr("ValidName")},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
@@ -399,16 +439,7 @@ func TestHandlerArtUpdation(t *testing.T) {
 			authCtxUser: &middleware.User{
 				ID: userUUID,
 			},
-			formDataName:   "ValidName",
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:       "Empty Name Field",
-			artIDParam: artUUID.String(),
-			authCtxUser: &middleware.User{
-				ID: userUUID,
-			},
-			formDataName:   "",
+			body:           &model.UpdateArtRequest{Name: strPtr("ValidName")},
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -417,7 +448,11 @@ func TestHandlerArtUpdation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo.arts[artUUID] = artSeed
 
-			req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/art/%s?name=%s&description=%s", tc.artIDParam, tc.formDataName, tc.formDataDesc), nil)
+			var bodyBytes []byte
+			if tc.body != nil {
+				bodyBytes, _ = json.Marshal(tc.body)
+			}
+			req := httptest.NewRequest(http.MethodPatch, "/art/"+tc.artIDParam, bytes.NewReader(bodyBytes))
 			if tc.authCtxUser != nil {
 				ctx := middleware.WithUser(req.Context(), *tc.authCtxUser)
 				req = req.WithContext(ctx)

@@ -17,7 +17,7 @@ import (
 const createArt = `-- name: CreateArt :one
 INSERT INTO art (id, name, description, image, tags, user_id)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
+RETURNING id
 `
 
 type CreateArtParams struct {
@@ -29,7 +29,7 @@ type CreateArtParams struct {
 	UserID      uuid.UUID
 }
 
-func (q *Queries) CreateArt(ctx context.Context, arg CreateArtParams) (Art, error) {
+func (q *Queries) CreateArt(ctx context.Context, arg CreateArtParams) (uuid.UUID, error) {
 	row := q.db.QueryRowContext(ctx, createArt,
 		arg.ID,
 		arg.Name,
@@ -38,19 +38,9 @@ func (q *Queries) CreateArt(ctx context.Context, arg CreateArtParams) (Art, erro
 		pq.Array(arg.Tags),
 		arg.UserID,
 	)
-	var i Art
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Image,
-		pq.Array(&i.Tags),
-		&i.Status,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteArt = `-- name: DeleteArt :one
@@ -76,13 +66,10 @@ SELECT
   id,
   name,
   description,
-image,
-tags,
-  user_id,
-  created_at,
-  updated_at
+  image,
+  tags
 FROM art
-WHERE id= $1
+WHERE id = $1
 `
 
 type GetArtByIDRow struct {
@@ -91,9 +78,6 @@ type GetArtByIDRow struct {
 	Description sql.NullString
 	Image       string
 	Tags        []string
-	UserID      uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
 }
 
 func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (GetArtByIDRow, error) {
@@ -105,38 +89,42 @@ func (q *Queries) GetArtByID(ctx context.Context, id uuid.UUID) (GetArtByIDRow, 
 		&i.Description,
 		&i.Image,
 		pq.Array(&i.Tags),
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getArtByUser = `-- name: GetArtByUser :many
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT 
+    id,
+    name,
+    description,
+    image
+FROM art
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetArtByUser(ctx context.Context, userID uuid.UUID) ([]Art, error) {
+type GetArtByUserRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+}
+
+func (q *Queries) GetArtByUser(ctx context.Context, userID uuid.UUID) ([]GetArtByUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getArtByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Art
+	var items []GetArtByUserRow
 	for rows.Next() {
-		var i Art
+		var i GetArtByUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Image,
-			pq.Array(&i.Tags),
-			&i.Status,
-			&i.UserID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -157,15 +145,9 @@ SELECT
     a.name,
     a.description,
     a.image,
-    a.tags,
     a.status,
     a.user_id,
-    a.created_at,
-    a.updated_at,
-    u.id AS user_id_ref,
     u.username,
-    u.role,
-    u.status,
     u.image AS user_image
 FROM art a
 JOIN users u ON a.user_id = u.id
@@ -183,15 +165,9 @@ type GetArtProfileByIDRow struct {
 	Name        string
 	Description sql.NullString
 	Image       string
-	Tags        []string
 	Status      ArtStatus
 	UserID      uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	UserIDRef   uuid.UUID
 	Username    sql.NullString
-	Role        UserRole
-	Status_2    AccountStatus
 	UserImage   sql.NullString
 }
 
@@ -203,45 +179,52 @@ func (q *Queries) GetArtProfileByID(ctx context.Context, arg GetArtProfileByIDPa
 		&i.Name,
 		&i.Description,
 		&i.Image,
-		pq.Array(&i.Tags),
 		&i.Status,
 		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.UserIDRef,
 		&i.Username,
-		&i.Role,
-		&i.Status_2,
 		&i.UserImage,
 	)
 	return i, err
 }
 
 const listArt = `-- name: ListArt :many
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT
+    id,
+    name,
+    description,
+    image,
+    tags,
+    user_id
+FROM art
 WHERE status = 'approved'
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListArt(ctx context.Context) ([]Art, error) {
+type ListArtRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	UserID      uuid.UUID
+}
+
+func (q *Queries) ListArt(ctx context.Context) ([]ListArtRow, error) {
 	rows, err := q.db.QueryContext(ctx, listArt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Art
+	var items []ListArtRow
 	for rows.Next() {
-		var i Art
+		var i ListArtRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Image,
 			pq.Array(&i.Tags),
-			&i.Status,
 			&i.UserID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -257,31 +240,44 @@ func (q *Queries) ListArt(ctx context.Context) ([]Art, error) {
 }
 
 const listArtByTag = `-- name: ListArtByTag :many
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT
+    id,
+    name,
+    description,
+    image,
+    tags,
+    user_id
+FROM art
 WHERE status = 'approved'
   AND $1 = ANY(tags)
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListArtByTag(ctx context.Context, tags []string) ([]Art, error) {
+type ListArtByTagRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	UserID      uuid.UUID
+}
+
+func (q *Queries) ListArtByTag(ctx context.Context, tags []string) ([]ListArtByTagRow, error) {
 	rows, err := q.db.QueryContext(ctx, listArtByTag, pq.Array(tags))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Art
+	var items []ListArtByTagRow
 	for rows.Next() {
-		var i Art
+		var i ListArtByTagRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Image,
 			pq.Array(&i.Tags),
-			&i.Status,
 			&i.UserID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -297,31 +293,44 @@ func (q *Queries) ListArtByTag(ctx context.Context, tags []string) ([]Art, error
 }
 
 const listArtByTags = `-- name: ListArtByTags :many
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT
+    id,
+    name,
+    description,
+    image,
+    tags,
+    user_id
+FROM art
 WHERE status = 'approved'
   AND tags && $1::text[]
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListArtByTags(ctx context.Context, dollar_1 []string) ([]Art, error) {
+type ListArtByTagsRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	UserID      uuid.UUID
+}
+
+func (q *Queries) ListArtByTags(ctx context.Context, dollar_1 []string) ([]ListArtByTagsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listArtByTags, pq.Array(dollar_1))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Art
+	var items []ListArtByTagsRow
 	for rows.Next() {
-		var i Art
+		var i ListArtByTagsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Image,
 			pq.Array(&i.Tags),
-			&i.Status,
 			&i.UserID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -337,20 +346,38 @@ func (q *Queries) ListArtByTags(ctx context.Context, dollar_1 []string) ([]Art, 
 }
 
 const listPendingArt = `-- name: ListPendingArt :many
-SELECT id, name, description, image, tags, status, user_id, created_at, updated_at FROM art
+SELECT
+    id,
+    name,
+    description,
+    image,
+    tags,
+    status,
+    created_at
+FROM art
 WHERE status = 'pending'
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListPendingArt(ctx context.Context) ([]Art, error) {
+type ListPendingArtRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Image       string
+	Tags        []string
+	Status      ArtStatus
+	CreatedAt   time.Time
+}
+
+func (q *Queries) ListPendingArt(ctx context.Context) ([]ListPendingArtRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPendingArt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Art
+	var items []ListPendingArtRow
 	for rows.Next() {
-		var i Art
+		var i ListPendingArtRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -358,9 +385,7 @@ func (q *Queries) ListPendingArt(ctx context.Context) ([]Art, error) {
 			&i.Image,
 			pq.Array(&i.Tags),
 			&i.Status,
-			&i.UserID,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -384,7 +409,7 @@ SET
     updated_at = NOW()
 WHERE id = $4
 AND user_id = $5
-RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
+RETURNING id
 `
 
 type UpdateArtParams struct {
@@ -395,7 +420,7 @@ type UpdateArtParams struct {
 	UserID      uuid.UUID
 }
 
-func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, error) {
+func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (uuid.UUID, error) {
 	row := q.db.QueryRowContext(ctx, updateArt,
 		arg.Name,
 		arg.Description,
@@ -403,19 +428,9 @@ func (q *Queries) UpdateArt(ctx context.Context, arg UpdateArtParams) (Art, erro
 		arg.ID,
 		arg.UserID,
 	)
-	var i Art
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Image,
-		pq.Array(&i.Tags),
-		&i.Status,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const updateArtStatus = `-- name: UpdateArtStatus :one
@@ -424,7 +439,7 @@ SET
     status = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, description, image, tags, status, user_id, created_at, updated_at
+RETURNING id, status
 `
 
 type UpdateArtStatusParams struct {
@@ -432,19 +447,14 @@ type UpdateArtStatusParams struct {
 	Status ArtStatus
 }
 
-func (q *Queries) UpdateArtStatus(ctx context.Context, arg UpdateArtStatusParams) (Art, error) {
+type UpdateArtStatusRow struct {
+	ID     uuid.UUID
+	Status ArtStatus
+}
+
+func (q *Queries) UpdateArtStatus(ctx context.Context, arg UpdateArtStatusParams) (UpdateArtStatusRow, error) {
 	row := q.db.QueryRowContext(ctx, updateArtStatus, arg.ID, arg.Status)
-	var i Art
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Image,
-		pq.Array(&i.Tags),
-		&i.Status,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i UpdateArtStatusRow
+	err := row.Scan(&i.ID, &i.Status)
 	return i, err
 }

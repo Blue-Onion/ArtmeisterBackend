@@ -24,7 +24,7 @@ type ProfileHandler struct {
 
 type profile struct {
 	User database.GetUserRow
-	Art  []database.Art
+	Art  []database.GetArtByUserRow
 }
 
 func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +112,7 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		))
 	}
 
-	art, err := h.Repo.CreateArt(r.Context(), params)
+	artID, err := h.Repo.CreateArt(r.Context(), params)
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf(
@@ -134,7 +134,7 @@ func (h *Handler) HandleArtCreation(w http.ResponseWriter, r *http.Request) {
 		))
 	}
 
-	handler.RespondWithJson(w, http.StatusOK, art)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": artID.String()})
 }
 func (h *Handler) HandleGetArts(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
@@ -363,7 +363,7 @@ func (h *Handler) HandlerArtUpdation(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandlerArtUpdation: art %s updated by user %s", artId, user.ID))
 	}
-	handler.RespondWithJson(w, http.StatusOK, updatedWork)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": updatedWork.String()})
 }
 func (h *ProfileHandler) HandlerGetArtistProfile(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()

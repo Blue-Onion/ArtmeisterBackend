@@ -7,20 +7,7 @@ INSERT INTO users (
 VALUES (
     $1, $2, $3
 )
-RETURNING 
-    id,
-    name,
-    username,
-    email,
-    batch,
-    status,
-    role,
-    image,
-    banner_image,
-    description,
-    social_links,
-    created_at,
-    updated_at;
+RETURNING id;
 
 
 -- name: GetUser :one
@@ -35,9 +22,7 @@ SELECT
     image,
     banner_image,
     description,
-    social_links,
-    created_at,
-    updated_at
+    social_links
 FROM users
 WHERE id = $1;
 
@@ -46,33 +31,19 @@ WHERE id = $1;
 SELECT 
     id,
     name,
-    username,
     email,
-    batch,
     status,
     role,
-    image,
-    banner_image,
-    description,
-    social_links,
-    created_at,
-    updated_at
+    image
 FROM users;
 -- name: GetAllUserApproved :many
 SELECT 
     id,
     name,
-    username,
-    email,
-    batch,
-    status,
     role,
-    image,
-    banner_image,
     description,
-    social_links,
-    created_at,
-    updated_at
+    image,
+    social_links
 FROM users WHERE status='approved';
 
 
@@ -80,18 +51,9 @@ FROM users WHERE status='approved';
 SELECT 
     id,
     name,
-    username,
     email,
     password,
-    batch,
-    status,
-    role,
-    image,
-    banner_image,
-    description,
-    social_links,
-    created_at,
-    updated_at
+    image
 FROM users
 WHERE email = $1;
 
@@ -102,16 +64,13 @@ SELECT
     name,
     username,
     email,
-    password,
     batch,
     status,
     role,
     image,
     banner_image,
     description,
-    social_links,
-    created_at,
-    updated_at
+    social_links
 FROM users
 WHERE username = $1;
 
@@ -140,25 +99,17 @@ RETURNING
     image,
     banner_image,
     description,
-    social_links,
-    created_at,
-    updated_at;
+    social_links;
 
 
 
 -- name: PatchUserPassword :one
-
 UPDATE users
 SET
     password = sqlc.arg('password'),
     updated_at = NOW()
 WHERE id = sqlc.arg('id')
-RETURNING
-    id,
-    name,
-    username,
-    email,
-    updated_at;
+RETURNING id;
 
 
 
@@ -172,15 +123,14 @@ SET
 WHERE id = sqlc.arg('id')
 RETURNING
     id,
-    name,
-    username,
-    email,
-    batch,
     status,
-    role,
-    image,
-    banner_image,
-    description,
-    social_links,
-    created_at,
-    updated_at;
+    role;
+
+
+-- name: CheckUsrById :one
+SELECT 
+    id,
+    status,
+    role
+FROM users
+WHERE id = $1;

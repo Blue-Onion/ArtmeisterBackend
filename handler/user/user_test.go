@@ -30,36 +30,22 @@ type mockUserRepo struct {
 	imagesErr    error
 }
 
-func (m *mockUserRepo) CreateUser(ctx context.Context, arg database.CreateUserParams) (database.CreateUserRow, error) {
+func (m *mockUserRepo) CreateUser(ctx context.Context, arg database.CreateUserParams) (uuid.UUID, error) {
 	if m.createErr != nil {
-		return database.CreateUserRow{}, m.createErr
+		return uuid.UUID{}, m.createErr
 	}
 	id := uuid.New()
 	u := database.User{
-		ID:          id,
-		Name:        arg.Name,
-		Email:       arg.Email,
-		Password:    arg.Password,
-		Batch:       arg.Batch,
-		Description: arg.Description,
-		Status:      arg.Status,
-		Role:        arg.Role,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:        id,
+		Name:      arg.Name,
+		Email:     arg.Email,
+		Password:  arg.Password,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 	m.users[id] = u
 	m.emails[arg.Email] = u
-	return database.CreateUserRow{
-		ID:          id,
-		Name:        u.Name,
-		Email:       u.Email,
-		Batch:       u.Batch,
-		Status:      u.Status,
-		Role:        u.Role,
-		Description: u.Description,
-		CreatedAt:   u.CreatedAt,
-		UpdatedAt:   u.UpdatedAt,
-	}, nil
+	return id, nil
 }
 
 func (m *mockUserRepo) GetUser(ctx context.Context, id uuid.UUID) (database.GetUserRow, error) {
@@ -73,13 +59,15 @@ func (m *mockUserRepo) GetUser(ctx context.Context, id uuid.UUID) (database.GetU
 	return database.GetUserRow{
 		ID:          u.ID,
 		Name:        u.Name,
+		Username:    u.Username,
 		Email:       u.Email,
 		Batch:       u.Batch,
 		Status:      u.Status,
 		Role:        u.Role,
+		Image:       u.Image,
+		BannerImage: u.BannerImage,
 		Description: u.Description,
-		CreatedAt:   u.CreatedAt,
-		UpdatedAt:   u.UpdatedAt,
+		SocialLinks: u.SocialLinks,
 	}, nil
 }
 
@@ -89,16 +77,11 @@ func (m *mockUserRepo) GetUserByEmail(ctx context.Context, email string) (databa
 		return database.GetUserByEmailRow{}, sql.ErrNoRows
 	}
 	return database.GetUserByEmailRow{
-		ID:          u.ID,
-		Name:        u.Name,
-		Email:       u.Email,
-		Password:    u.Password,
-		Batch:       u.Batch,
-		Status:      u.Status,
-		Role:        u.Role,
-		Description: u.Description,
-		CreatedAt:   u.CreatedAt,
-		UpdatedAt:   u.UpdatedAt,
+		ID:       u.ID,
+		Name:     u.Name,
+		Email:    u.Email,
+		Password: u.Password,
+		Image:    u.Image,
 	}, nil
 }
 
@@ -120,53 +103,29 @@ func (m *mockUserRepo) PatchUserProfile(ctx context.Context, arg database.PatchU
 	return database.PatchUserProfileRow{
 		ID:          u.ID,
 		Name:        u.Name,
+		Username:    u.Username,
 		Email:       u.Email,
 		Batch:       u.Batch,
 		Status:      u.Status,
 		Role:        u.Role,
+		Image:       u.Image,
+		BannerImage: u.BannerImage,
 		Description: u.Description,
-		CreatedAt:   u.CreatedAt,
-		UpdatedAt:   u.UpdatedAt,
+		SocialLinks: u.SocialLinks,
 	}, nil
 }
 
-func (m *mockUserRepo) PatchUserPassword(ctx context.Context, arg database.PatchUserPasswordParams) (database.PatchUserPasswordRow, error) {
+func (m *mockUserRepo) PatchUserPassword(ctx context.Context, arg database.PatchUserPasswordParams) (uuid.UUID, error) {
 	if m.passwordErr != nil {
-		return database.PatchUserPasswordRow{}, m.passwordErr
+		return uuid.UUID{}, m.passwordErr
 	}
 	u, ok := m.users[arg.ID]
 	if !ok {
-		return database.PatchUserPasswordRow{}, sql.ErrNoRows
+		return uuid.UUID{}, sql.ErrNoRows
 	}
 	u.Password = arg.Password
 	m.users[arg.ID] = u
-	return database.PatchUserPasswordRow{
-		ID:        u.ID,
-		UpdatedAt: time.Now(),
-	}, nil
-}
-
-func (m *mockUserRepo) PatchUserImages(ctx context.Context, arg database.PatchUserImagesParams) (database.PatchUserImagesRow, error) {
-	if m.imagesErr != nil {
-		return database.PatchUserImagesRow{}, m.imagesErr
-	}
-	u, ok := m.users[arg.ID]
-	if !ok {
-		return database.PatchUserImagesRow{}, sql.ErrNoRows
-	}
-	if arg.Image.Valid {
-		u.Image = arg.Image
-	}
-	if arg.BannerImage.Valid {
-		u.BannerImage = arg.BannerImage
-	}
-	m.users[arg.ID] = u
-	return database.PatchUserImagesRow{
-		ID:          u.ID,
-		Image:       u.Image,
-		BannerImage: u.BannerImage,
-		UpdatedAt:   time.Now(),
-	}, nil
+	return u.ID, nil
 }
 
 func newMockUserRepo() *mockUserRepo {
@@ -194,11 +153,9 @@ func TestHandleCreateUser(t *testing.T) {
 		{
 			name: "Success Registration",
 			body: model.CreateUser{
-				Name:        "Alice",
-				Email:       "alice@example.com",
-				Password:    "password123",
-				Batch:       "2026",
-				Description: "Art Lover",
+				Name:     "Alice",
+				Email:    "alice@example.com",
+				Password: "password123",
 			},
 			expectedStatus: http.StatusCreated,
 			expectSuccess:  true,
@@ -215,7 +172,6 @@ func TestHandleCreateUser(t *testing.T) {
 				Name:     "Alice Dupe",
 				Email:    "alice@example.com",
 				Password: "password",
-				Batch:    "2026",
 			},
 			mockErr:        fmt.Errorf("pq: duplicate key value violates unique constraint"),
 			expectedStatus: http.StatusInternalServerError,
@@ -227,7 +183,6 @@ func TestHandleCreateUser(t *testing.T) {
 				Name:     "",
 				Email:    "",
 				Password: "",
-				Batch:    "",
 			},
 			expectedStatus: http.StatusCreated, // Handler does not validate empty fields
 			expectSuccess:  true,
@@ -434,8 +389,8 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				Role: database.UserRoleUser,
 			},
 			body: model.PatchUserProfileRequest{
-				Name:  strPtr("Alice Updated"),
-				Email: strPtr("alice.updated@example.com"),
+			UserName: strPtr("Alice Updated"),
+			Email:    strPtr("alice.updated@example.com"),
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -447,7 +402,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				Role: database.UserRoleUser,
 			},
 			body: model.PatchUserProfileRequest{
-				Name: strPtr("Hacked Name"),
+				UserName: strPtr("Hacked Name"),
 			},
 			expectedStatus: http.StatusForbidden,
 		},
@@ -459,7 +414,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				Role: database.UserRoleAdmin,
 			},
 			body: model.PatchUserProfileRequest{
-				Name: strPtr("Admin Edit"),
+				UserName: strPtr("Admin Edit"),
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -467,7 +422,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			name:           "Unauthenticated Request",
 			userIDParam:    userUUID.String(),
 			authCtxUser:    nil,
-			body:           model.PatchUserProfileRequest{Name: strPtr("Sneaky")},
+			body:           model.PatchUserProfileRequest{UserName: strPtr("Sneaky")},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
@@ -477,7 +432,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				ID:   userUUID,
 				Role: database.UserRoleUser,
 			},
-			body:           model.PatchUserProfileRequest{Name: strPtr("X")},
+			body:           model.PatchUserProfileRequest{UserName: strPtr("X")},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -497,7 +452,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				ID:   userUUID,
 				Role: database.UserRoleUser,
 			},
-			body:           model.PatchUserProfileRequest{Name: strPtr("Fail")},
+			body:           model.PatchUserProfileRequest{UserName: strPtr("Fail")},
 			mockErr:        fmt.Errorf("db connection lost"),
 			expectedStatus: http.StatusInternalServerError,
 		},

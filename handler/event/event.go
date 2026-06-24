@@ -91,7 +91,7 @@ func (h *EventHandler) HandleCreateEvent(w http.ResponseWriter, r *http.Request)
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleCreateEvent: event %s created", id))
 	}
-	handler.RespondWithJson(w, http.StatusOK, res)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": res.String()})
 }
 func (h *EventHandler) HandleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
@@ -235,7 +235,7 @@ func (h *EventHandler) HandleUpdateEvent(w http.ResponseWriter, r *http.Request)
 		log.Info(fmt.Sprintf("HandleUpdateEvent: event %s updated", id))
 	}
 
-	handler.RespondWithJson(w, http.StatusOK, res)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": res.String()})
 }
 func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
@@ -266,7 +266,7 @@ func (h *EventAttendeeHandler) HandleJoinEvent(w http.ResponseWriter, r *http.Re
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleJoinEvent: user %s joined event %s", userId, event_id))
 	}
-	handler.RespondWithJson(w, http.StatusOK, res)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": res.String()})
 }
 func (h *EventAttendeeHandler) HandleDeleteEventAttendee(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
@@ -363,7 +363,7 @@ func (h *EventAttendeeHandler) HandleGetMyEvent(w http.ResponseWriter, r *http.R
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleAllEventAttendee: retrieved attendees for event %s successfully", event_id))
 	}
-	handler.RespondWithJson(w, http.StatusOK, res)
+	handler.RespondWithJson(w, http.StatusOK, map[string]string{"ID": res.String()})
 }
 
 func (h *EventAttendeeHandler) HandleGetMyAllEvent(w http.ResponseWriter, r *http.Request) {
