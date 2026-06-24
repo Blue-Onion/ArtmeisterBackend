@@ -1,19 +1,15 @@
 package admin
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
-	"github.com/Blue-Onion/ArtmeisterBackend/model"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
@@ -35,32 +31,34 @@ func (m *mockAdminRepo) PatchUserAdmin(ctx context.Context, arg database.PatchUs
 	if !ok {
 		return database.PatchUserAdminRow{}, sql.ErrNoRows
 	}
-	u.Role = arg.Role
-	u.Status = arg.Status
+	if arg.Role.Valid {
+		u.Role = arg.Role.UserRole
+	}
+	if arg.Status.Valid {
+		u.Status = arg.Status.AccountStatus
+	}
 	m.users[arg.ID] = u
 	return database.PatchUserAdminRow{
-		ID:        u.ID,
-		Name:      u.Name,
-		Email:     u.Email,
-		Batch:     u.Batch,
-		Status:    u.Status,
-		Role:      u.Role,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: time.Now(),
+		ID:     u.ID,
+		Status: u.Status,
+		Role:   u.Role,
 	}, nil
 }
 
-func (m *mockAdminRepo) UpdateArtStatus(ctx context.Context, arg database.UpdateArtStatusParams) (database.Art, error) {
+func (m *mockAdminRepo) UpdateArtStatus(ctx context.Context, arg database.UpdateArtStatusParams) (database.UpdateArtStatusRow, error) {
 	if m.statusErr != nil {
-		return database.Art{}, m.statusErr
+		return database.UpdateArtStatusRow{}, m.statusErr
 	}
 	a, ok := m.arts[arg.ID]
 	if !ok {
-		return database.Art{}, sql.ErrNoRows
+		return database.UpdateArtStatusRow{}, sql.ErrNoRows
 	}
 	a.Status = arg.Status
 	m.arts[arg.ID] = a
-	return a, nil
+	return database.UpdateArtStatusRow{
+		ID:     a.ID,
+		Status: a.Status,
+	}, nil
 }
 
 func newMockAdminRepo() *mockAdminRepo {
@@ -85,69 +83,52 @@ func TestHandlerUserStatus(t *testing.T) {
 	tests := []struct {
 		name           string
 		userIDParam    string
-		body           any
+		queryRole      string
+		queryStatus    string
 		mockErr        error
 		expectedStatus int
 	}{
 		{
-			name:        "Success Approve User",
-			userIDParam: userUUID.String(),
-			body: model.PatchUserStatus{
-				Role:   "user",
-				Status: "approved",
-			},
+			name:           "Success Approve User",
+			userIDParam:    userUUID.String(),
+			queryStatus:    "approved",
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:        "Invalid Role Provided",
-			userIDParam: userUUID.String(),
-			body: model.PatchUserStatus{
-				Role:   "invalid-role",
-				Status: "approved",
-			},
+			name:           "Success Change Role",
+			userIDParam:    userUUID.String(),
+			queryRole:      "admin",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Invalid Status Provided",
+			userIDParam:    userUUID.String(),
+			queryStatus:    "invalid-status",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Both Empty",
+			userIDParam:    userUUID.String(),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:        "Invalid Status Provided",
-			userIDParam: userUUID.String(),
-			body: model.PatchUserStatus{
-				Role:   "user",
-				Status: "invalid-status",
-			},
+			name:           "Both Provided Fails",
+			userIDParam:    userUUID.String(),
+			queryRole:      "user",
+			queryStatus:    "approved",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:        "Both Empty",
-			userIDParam: userUUID.String(),
-			body: model.PatchUserStatus{
-				Role:   "",
-				Status: "",
-			},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:        "Repo Error Handle",
-			userIDParam: userUUID.String(),
-			body: model.PatchUserStatus{
-				Role:   "user",
-				Status: "approved",
-			},
+			name:           "Repo Error Handle",
+			userIDParam:    userUUID.String(),
+			queryStatus:    "approved",
 			mockErr:        errors.New("db error"),
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name:        "Invalid UUID Param",
-			userIDParam: "not-a-uuid",
-			body: model.PatchUserStatus{
-				Role:   "user",
-				Status: "approved",
-			},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "Invalid JSON Body",
-			userIDParam:    userUUID.String(),
-			body:           "{bad}",
+			name:           "Invalid UUID Param",
+			userIDParam:    "not-a-uuid",
+			queryStatus:    "approved",
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -156,21 +137,27 @@ func TestHandlerUserStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo.patchErr = tc.mockErr
 
-			var buf bytes.Buffer
-			if s, ok := tc.body.(string); ok {
-				buf.WriteString(s)
-			} else {
-				json.NewEncoder(&buf).Encode(tc.body)
+			query := fmt.Sprintf("/admin/users/%s/status", tc.userIDParam)
+			if tc.queryRole != "" || tc.queryStatus != "" {
+				query += "?"
+				if tc.queryRole != "" {
+					query += "role=" + tc.queryRole
+				}
+				if tc.queryStatus != "" {
+					if tc.queryRole != "" {
+						query += "&"
+					}
+					query += "status=" + tc.queryStatus
+				}
 			}
-
-			req := httptest.NewRequest(http.MethodPatch, "/admin/users/"+tc.userIDParam+"/status", &buf)
+			req := httptest.NewRequest(http.MethodPatch, query, nil)
 
 			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("id", tc.userIDParam)
+			rctx.URLParams.Add("user_id", tc.userIDParam)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 			rr := httptest.NewRecorder()
-			h.HandlerUserStatus(rr, req)
+			h.HandlerRole(rr, req)
 
 			if rr.Code != tc.expectedStatus {
 				t.Errorf("expected status %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())

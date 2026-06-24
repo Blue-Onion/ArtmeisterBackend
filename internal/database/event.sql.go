@@ -20,7 +20,7 @@ INSERT INTO events (
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+RETURNING id
 `
 
 type CreateEventParams struct {
@@ -34,7 +34,7 @@ type CreateEventParams struct {
 	Status      ModeOfConduct
 }
 
-func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event, error) {
+func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (uuid.UUID, error) {
 	row := q.db.QueryRowContext(ctx, createEvent,
 		arg.ID,
 		arg.Name,
@@ -45,20 +45,9 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		arg.EventDate,
 		arg.Status,
 	)
-	var i Event
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Venue,
-		&i.Image,
-		&i.BannerImage,
-		&i.EventDate,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteEvent = `-- name: DeleteEvent :one
@@ -82,16 +71,25 @@ SELECT
     image,
     banner_image,
     event_date,
-    status,
-    created_at,
-    updated_at
+    status
 FROM events
 WHERE id = $1
 `
 
-func (q *Queries) GetEventByID(ctx context.Context, id uuid.UUID) (Event, error) {
+type GetEventByIDRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Venue       sql.NullString
+	Image       sql.NullString
+	BannerImage sql.NullString
+	EventDate   time.Time
+	Status      ModeOfConduct
+}
+
+func (q *Queries) GetEventByID(ctx context.Context, id uuid.UUID) (GetEventByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getEventByID, id)
-	var i Event
+	var i GetEventByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -101,38 +99,50 @@ func (q *Queries) GetEventByID(ctx context.Context, id uuid.UUID) (Event, error)
 		&i.BannerImage,
 		&i.EventDate,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listEvents = `-- name: ListEvents :many
-SELECT id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListEvents(ctx context.Context) ([]Event, error) {
+type ListEventsRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Venue       sql.NullString
+	Image       sql.NullString
+	EventDate   time.Time
+	Status      ModeOfConduct
+}
+
+func (q *Queries) ListEvents(ctx context.Context) ([]ListEventsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEvents)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Event
+	var items []ListEventsRow
 	for rows.Next() {
-		var i Event
+		var i ListEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Venue,
 			&i.Image,
-			&i.BannerImage,
 			&i.EventDate,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -148,32 +158,46 @@ func (q *Queries) ListEvents(ctx context.Context) ([]Event, error) {
 }
 
 const listEventsByMode = `-- name: ListEventsByMode :many
-SELECT id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 WHERE status = $1
 ORDER BY event_date ASC
 `
 
-func (q *Queries) ListEventsByMode(ctx context.Context, status ModeOfConduct) ([]Event, error) {
+type ListEventsByModeRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Venue       sql.NullString
+	Image       sql.NullString
+	EventDate   time.Time
+	Status      ModeOfConduct
+}
+
+func (q *Queries) ListEventsByMode(ctx context.Context, status ModeOfConduct) ([]ListEventsByModeRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEventsByMode, status)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Event
+	var items []ListEventsByModeRow
 	for rows.Next() {
-		var i Event
+		var i ListEventsByModeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Venue,
 			&i.Image,
-			&i.BannerImage,
 			&i.EventDate,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -189,32 +213,46 @@ func (q *Queries) ListEventsByMode(ctx context.Context, status ModeOfConduct) ([
 }
 
 const listUpcomingEvents = `-- name: ListUpcomingEvents :many
-SELECT id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 WHERE event_date >= CURRENT_DATE
 ORDER BY event_date ASC
 `
 
-func (q *Queries) ListUpcomingEvents(ctx context.Context) ([]Event, error) {
+type ListUpcomingEventsRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	Venue       sql.NullString
+	Image       sql.NullString
+	EventDate   time.Time
+	Status      ModeOfConduct
+}
+
+func (q *Queries) ListUpcomingEvents(ctx context.Context) ([]ListUpcomingEventsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUpcomingEvents)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Event
+	var items []ListUpcomingEventsRow
 	for rows.Next() {
-		var i Event
+		var i ListUpcomingEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Venue,
 			&i.Image,
-			&i.BannerImage,
 			&i.EventDate,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -241,7 +279,7 @@ SET
     status = COALESCE($7, status),
     updated_at = NOW()
 WHERE id = $8
-RETURNING id, name, description, venue, image, banner_image, event_date, status, created_at, updated_at
+RETURNING id
 `
 
 type UpdateEventParams struct {
@@ -255,7 +293,7 @@ type UpdateEventParams struct {
 	ID          uuid.UUID
 }
 
-func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
+func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (uuid.UUID, error) {
 	row := q.db.QueryRowContext(ctx, updateEvent,
 		arg.Name,
 		arg.Description,
@@ -266,18 +304,7 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		arg.Status,
 		arg.ID,
 	)
-	var i Event
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Venue,
-		&i.Image,
-		&i.BannerImage,
-		&i.EventDate,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

@@ -187,7 +187,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Password: hashPass,
 	}
 	fmt.Println(userParam)
-	user, err := h.Repo.CreateUser(r.Context(), userParam)
+	userID, err := h.Repo.CreateUser(r.Context(), userParam)
 	if err != nil {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleCreateUser: failed to create user %s: %v", param.Email, err))
@@ -198,10 +198,10 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if log != nil {
 		log.Info(fmt.Sprintf("HandleCreateUser: user created with email %s", param.Email))
 	}
-	token, err := utlis.GenerateJwt(user.ID)
+	token, err := utlis.GenerateJwt(userID)
 	if err != nil {
 		if log != nil {
-			log.Error(fmt.Sprintf("HandleLogin: failed to generate JWT for user %s: %v", user.ID, err))
+			log.Error(fmt.Sprintf("HandleLogin: failed to generate JWT for user %s: %v", userID, err))
 		}
 		handler.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authentication token")
 		return
@@ -216,7 +216,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600 * 24,
 	})
 
-	handler.RespondWithJson(w, http.StatusCreated, user)
+	handler.RespondWithJson(w, http.StatusCreated, map[string]string{"ID": userID.String()})
 }
 
 func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {

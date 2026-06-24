@@ -5,7 +5,7 @@ INSERT INTO events (
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING *;
+RETURNING id;
 
 -- name: GetEventByID :one
 SELECT
@@ -16,28 +16,47 @@ SELECT
     image,
     banner_image,
     event_date,
-    status,
-    created_at,
-    updated_at
+    status
 FROM events
 WHERE id = $1;
 
 
 -- name: ListEvents :many
-SELECT *
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 ORDER BY created_at DESC;
 
 
 -- name: ListUpcomingEvents :many
-SELECT *
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 WHERE event_date >= CURRENT_DATE
 ORDER BY event_date ASC;
 
 
 -- name: ListEventsByMode :many
-SELECT *
+SELECT
+    id,
+    name,
+    description,
+    venue,
+    image,
+    event_date,
+    status
 FROM events
 WHERE status = $1
 ORDER BY event_date ASC;
@@ -55,7 +74,7 @@ SET
     status = COALESCE(sqlc.narg('status'), status),
     updated_at = NOW()
 WHERE id = sqlc.arg('id')
-RETURNING *;
+RETURNING id;
 
 
 -- name: DeleteEvent :one
