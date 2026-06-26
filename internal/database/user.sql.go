@@ -40,10 +40,14 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     name,
     email,
-    password
+    password,
+    batch
 )
 VALUES (
-    $1, $2, $3
+    $1,
+    $2,
+    $3,
+    COALESCE($4, '')
 )
 RETURNING id
 `
@@ -52,10 +56,16 @@ type CreateUserParams struct {
 	Name     string
 	Email    string
 	Password string
+	Batch    interface{}
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Name, arg.Email, arg.Password)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.Name,
+		arg.Email,
+		arg.Password,
+		arg.Batch,
+	)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err

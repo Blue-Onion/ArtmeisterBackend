@@ -185,6 +185,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Name:     param.Name,
 		Email:    param.Email,
 		Password: hashPass,
+		Batch:    sql.NullString{String: "", Valid: true},
 	}
 	fmt.Println(userParam)
 	userID, err := h.Repo.CreateUser(r.Context(), userParam)
@@ -279,6 +280,7 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 			handler.RespondWithError(w, http.StatusNotFound, "User profile not found")
 			return
 		}
+		fmt.Printf("HandleUpdateUserProfile ERROR: %v\n", err)
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleUpdateUserProfile: failed to update profile for user %s: %v", userId, err))
 		}

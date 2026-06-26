@@ -60,7 +60,7 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		user, err := h.Repo.CheckUsrById(r.Context(), id)
+		usr, err := h.Repo.CheckUsrById(r.Context(), id)
 		if err != nil {
 			if utlis.IsNotFound(err) {
 				handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found")
@@ -70,7 +70,11 @@ func (h Handler) MiddlewareAuth(next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userContextKey, user)
+		ctx := context.WithValue(r.Context(), userContextKey, User{
+			ID:     usr.ID,
+			Status: usr.Status,
+			Role:   usr.Role,
+		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

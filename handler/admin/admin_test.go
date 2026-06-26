@@ -89,47 +89,47 @@ func TestHandlerUserStatus(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:           "Success Approve User",
+			name:           "approve user status",
 			userIDParam:    userUUID.String(),
 			queryStatus:    "approved",
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "Success Change Role",
+			name:           "change role to admin",
 			userIDParam:    userUUID.String(),
 			queryRole:      "admin",
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "Invalid Status Provided",
-			userIDParam:    userUUID.String(),
-			queryStatus:    "invalid-status",
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "Both Empty",
+			name:           "both empty",
 			userIDParam:    userUUID.String(),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Both Provided Fails",
+			name:           "both provided",
 			userIDParam:    userUUID.String(),
 			queryRole:      "user",
 			queryStatus:    "approved",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Repo Error Handle",
+			name:           "repo error",
 			userIDParam:    userUUID.String(),
 			queryStatus:    "approved",
 			mockErr:        errors.New("db error"),
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name:           "Invalid UUID Param",
+			name:           "invalid uuid",
 			userIDParam:    "not-a-uuid",
 			queryStatus:    "approved",
 			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "user not found",
+			userIDParam:    uuid.New().String(),
+			queryStatus:    "approved",
+			expectedStatus: http.StatusNotFound,
 		},
 	}
 
@@ -140,27 +140,28 @@ func TestHandlerUserStatus(t *testing.T) {
 			query := fmt.Sprintf("/admin/users/%s/status", tc.userIDParam)
 			if tc.queryRole != "" || tc.queryStatus != "" {
 				query += "?"
+				first := true
 				if tc.queryRole != "" {
 					query += "role=" + tc.queryRole
+					first = false
 				}
 				if tc.queryStatus != "" {
-					if tc.queryRole != "" {
+					if !first {
 						query += "&"
 					}
 					query += "status=" + tc.queryStatus
 				}
 			}
 			req := httptest.NewRequest(http.MethodPatch, query, nil)
-
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("user_id", tc.userIDParam)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
 			rr := httptest.NewRecorder()
+
 			h.HandlerRole(rr, req)
 
 			if rr.Code != tc.expectedStatus {
-				t.Errorf("expected status %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
+				t.Errorf("expected %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
 			}
 		})
 	}
@@ -185,35 +186,47 @@ func TestHandlerArtStatus(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:           "Success Approve Art",
+			name:           "approve art",
 			artIDParam:     artUUID.String(),
 			queryStatus:    "approved",
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "Invalid Query Status",
+			name:           "reject art",
+			artIDParam:     artUUID.String(),
+			queryStatus:    "rejected",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid status",
 			artIDParam:     artUUID.String(),
 			queryStatus:    "invalid-status",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Repo Failure",
+			name:           "empty status",
+			artIDParam:     artUUID.String(),
+			queryStatus:    "",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "repo failure",
 			artIDParam:     artUUID.String(),
 			queryStatus:    "approved",
 			mockErr:        errors.New("db write failed"),
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name:           "Invalid Art UUID",
+			name:           "invalid art uuid",
 			artIDParam:     "not-a-uuid",
 			queryStatus:    "approved",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Empty Status Param",
-			artIDParam:     artUUID.String(),
-			queryStatus:    "",
-			expectedStatus: http.StatusBadRequest,
+			name:           "art not found",
+			artIDParam:     uuid.New().String(),
+			queryStatus:    "approved",
+			expectedStatus: http.StatusNotFound,
 		},
 	}
 
@@ -221,17 +234,17 @@ func TestHandlerArtStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo.statusErr = tc.mockErr
 
-			req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/arts/%s/status?status=%s", tc.artIDParam, tc.queryStatus), nil)
-
+			query := fmt.Sprintf("/admin/arts/%s/status?status=%s", tc.artIDParam, tc.queryStatus)
+			req := httptest.NewRequest(http.MethodPatch, query, nil)
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("art_id", tc.artIDParam)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
 			rr := httptest.NewRecorder()
+
 			h.HandlerArtStatus(rr, req)
 
 			if rr.Code != tc.expectedStatus {
-				t.Errorf("expected status %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
+				t.Errorf("expected %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
 			}
 		})
 	}
