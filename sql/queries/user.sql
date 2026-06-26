@@ -2,10 +2,14 @@
 INSERT INTO users (
     name,
     email,
-    password
+    password,
+    batch
 )
 VALUES (
-    $1, $2, $3
+    sqlc.arg('name'),
+    sqlc.arg('email'),
+    sqlc.arg('password'),
+    COALESCE(sqlc.narg('batch'), '')
 )
 RETURNING id;
 
