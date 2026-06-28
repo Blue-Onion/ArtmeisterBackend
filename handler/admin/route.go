@@ -11,15 +11,14 @@ import (
 func AdminRoute(userHandler *user.Handler, artHandler *art.Handler, middlewareHandler *middleware.Handler) *chi.Mux {
 	r := chi.NewRouter()
 
-	adminAuth := middlewareHandler.MiddlewareAdminAuth
-	r.Use(func(next http.Handler) http.Handler {
-		return adminAuth(next)
-	})
+	senior := middlewareHandler.MiddlewareSeniorAuth
+	moderator := middlewareHandler.MiddlewareModeratorAuth
+
 	adminUserHandler := &UserHandler{Repo: userHandler.Repo}
 	adminArtHandler := &ArtHandler{Repo: artHandler.Repo}
 
-	r.Patch("/arts/{art_id}/status", adminArtHandler.HandlerArtStatus)
-	r.Patch("/users/{user_id}/status", adminUserHandler.HandlerRole)
+	r.Patch("/arts/{art_id}/status", moderator(http.HandlerFunc(adminArtHandler.HandlerArtStatus)))
+	r.Patch("/users/{user_id}/status", senior(http.HandlerFunc(adminUserHandler.HandlerRole)))
 
 	return r
 }

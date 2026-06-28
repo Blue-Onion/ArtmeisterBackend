@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
@@ -76,8 +77,15 @@ func TestHandlerUserStatus(t *testing.T) {
 	repo.users[userUUID] = database.User{
 		ID:     userUUID,
 		Name:   "Alice",
-		Role:   database.UserRoleUser,
+		Role:   database.UserRoleMember,
 		Status: database.AccountStatusPending,
+	}
+
+	seniorID := uuid.New()
+	seniorUser := middleware.User{
+		ID:     seniorID,
+		Role:   database.UserRolePresident,
+		Status: database.AccountStatusApproved,
 	}
 
 	tests := []struct {
@@ -95,10 +103,16 @@ func TestHandlerUserStatus(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "change role to admin",
+			name:           "change role",
 			userIDParam:    userUUID.String(),
-			queryRole:      "admin",
+			queryRole:      "core_member",
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "cannot assign higher role",
+			userIDParam:    userUUID.String(),
+			queryRole:      "president",
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "both empty",
@@ -108,8 +122,14 @@ func TestHandlerUserStatus(t *testing.T) {
 		{
 			name:           "both provided",
 			userIDParam:    userUUID.String(),
-			queryRole:      "user",
+			queryRole:      "member",
 			queryStatus:    "approved",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid role value",
+			userIDParam:    userUUID.String(),
+			queryRole:      "invalid_role",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -155,7 +175,8 @@ func TestHandlerUserStatus(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPatch, query, nil)
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("user_id", tc.userIDParam)
-			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			ctx := middleware.WithSenior(req.Context(), seniorUser)
+			req = req.WithContext(context.WithValue(ctx, chi.RouteCtxKey, rctx))
 			rr := httptest.NewRecorder()
 
 			h.HandlerRole(rr, req)
@@ -176,6 +197,13 @@ func TestHandlerArtStatus(t *testing.T) {
 		ID:     artUUID,
 		Name:   "Artwork",
 		Status: database.ArtStatusPending,
+	}
+
+	moderatorID := uuid.New()
+	moderatorUser := middleware.User{
+		ID:     moderatorID,
+		Role:   database.UserRolePresident,
+		Status: database.AccountStatusApproved,
 	}
 
 	tests := []struct {
@@ -238,7 +266,8 @@ func TestHandlerArtStatus(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPatch, query, nil)
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("art_id", tc.artIDParam)
-			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			ctx := middleware.WithModerator(req.Context(), moderatorUser)
+			req = req.WithContext(context.WithValue(ctx, chi.RouteCtxKey, rctx))
 			rr := httptest.NewRecorder()
 
 			h.HandlerArtStatus(rr, req)

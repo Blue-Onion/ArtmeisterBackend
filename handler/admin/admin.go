@@ -7,6 +7,7 @@ import (
 	"github.com/Blue-Onion/ArtmeisterBackend/handler"
 	"github.com/Blue-Onion/ArtmeisterBackend/handler/logger"
 	"github.com/Blue-Onion/ArtmeisterBackend/internal/database"
+	"github.com/Blue-Onion/ArtmeisterBackend/middleware"
 	"github.com/Blue-Onion/ArtmeisterBackend/utlis"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
@@ -21,6 +22,11 @@ type ArtHandler struct {
 
 func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
+	_, ok := middleware.GetModerator(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	artId := chi.URLParam(r, "art_id")
 	id, err := uuid.Parse(artId)
 	if err != nil {
@@ -61,6 +67,11 @@ func (h *ArtHandler) HandlerArtStatus(w http.ResponseWriter, r *http.Request) {
 }
 func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 	log, _ := logger.GetLogger()
+	actor, ok := middleware.GetSenior(r.Context())
+	if !ok {
+		handler.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	userID := chi.URLParam(r, "user_id")
 	id, err := uuid.Parse(userID)
 	if err != nil {
@@ -74,8 +85,6 @@ func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 	role := r.URL.Query().Get("role")
 	status := r.URL.Query().Get("status")
 
-	fmt.Println(role)
-	fmt.Println(status)
 	if (role == "" && status == "") || (role != "" && status != "") {
 		handler.RespondWithError(
 			w,
@@ -85,8 +94,19 @@ func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := database.PatchUserAdminParams{
+	if role != "" {
+		if !utlis.IsValidUserRole(role) {
+			handler.RespondWithError(w, http.StatusBadRequest, "Invalid role value")
+			return
+		}
+		targetRole := database.UserRole(role)
+		if !utlis.CanAssignRole(actor.Role, targetRole) {
+			handler.RespondWithError(w, http.StatusForbidden, "You cannot assign this role")
+			return
+		}
+	}
 
+	params := database.PatchUserAdminParams{
 		ID: id,
 	}
 
@@ -95,16 +115,13 @@ func (h *UserHandler) HandlerRole(w http.ResponseWriter, r *http.Request) {
 			AccountStatus: database.AccountStatus(status),
 			Valid:         true,
 		}
-
 	}
 
 	if role != "" {
-
 		params.Role = database.NullUserRole{
 			UserRole: database.UserRole(role),
 			Valid:    true,
 		}
-
 	}
 	user, err := h.Repo.PatchUserAdmin(r.Context(), params)
 	if err != nil {

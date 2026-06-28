@@ -11,7 +11,7 @@ import (
 func EventRouter(eventHandler *EventHandler, attendeeHandler *EventAttendeeHandler, middlewareHandler *middleware.Handler) *chi.Mux {
 	r := chi.NewRouter()
 	auth := middlewareHandler.MiddlewareAuth
-	adminAuth := middlewareHandler.MiddlewareAdminAuth
+	moderator := middlewareHandler.MiddlewareModeratorAuth
 
 	// Public routes
 	r.Get("/", eventHandler.HandleGetAllEvent)
@@ -24,10 +24,10 @@ func EventRouter(eventHandler *EventHandler, attendeeHandler *EventAttendeeHandl
 	r.Delete("/{id}/attendee/{user_id}", auth(http.HandlerFunc(attendeeHandler.HandleDeleteEventAttendee)))
 	r.Get("/{id}/attendees", auth(http.HandlerFunc(attendeeHandler.HandleAllEventAttendee)))
 
-	// Admin-only routes (require admin authentication)
-	r.Post("/", adminAuth(http.HandlerFunc(eventHandler.HandleCreateEvent)))
-	r.Patch("/{id}", adminAuth(http.HandlerFunc(eventHandler.HandleUpdateEvent)))
-	r.Delete("/{id}", adminAuth(http.HandlerFunc(eventHandler.HandleDeleteEvent)))
+	// Moderator routes (require president or vp)
+	r.Post("/", moderator(http.HandlerFunc(eventHandler.HandleCreateEvent)))
+	r.Patch("/{id}", moderator(http.HandlerFunc(eventHandler.HandleUpdateEvent)))
+	r.Delete("/{id}", moderator(http.HandlerFunc(eventHandler.HandleDeleteEvent)))
 
 	return r
 }
