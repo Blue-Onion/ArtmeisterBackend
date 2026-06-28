@@ -46,7 +46,7 @@ func seedAuthUser(repo *mockAuthRepo, overrides ...func(*database.User)) (uuid.U
 		Name:   "Test User",
 		Email:  "test@example.com",
 		Status: database.AccountStatusApproved,
-		Role:   database.UserRoleUser,
+		Role:   database.UserRoleMember,
 	}
 	for _, o := range overrides {
 		o(&u)
@@ -63,7 +63,7 @@ func TestMiddlewareAuth(t *testing.T) {
 
 	userID, validToken := seedAuthUser(repo)
 	seedAuthUser(repo, func(u *database.User) {
-		u.Role = database.UserRoleAdmin
+		u.Role = database.UserRolePresident
 	})
 
 	tests := []struct {
@@ -151,18 +151,21 @@ func TestMiddlewareAuth(t *testing.T) {
 	}
 }
 
-func TestMiddlewareAdminAuth(t *testing.T) {
+func TestMiddlewareSeniorAuth(t *testing.T) {
 	repo := newMockAuthRepo()
 	h := &Handler{Repo: repo}
 
-	_, adminToken := seedAuthUser(repo, func(u *database.User) {
-		u.Role = database.UserRoleAdmin
+	_, presidentToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRolePresident
+	})
+	_, vpToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRoleVicePresident
 	})
 	_, userToken := seedAuthUser(repo, func(u *database.User) {
-		u.Role = database.UserRoleUser
+		u.Role = database.UserRoleMember
 	})
 	_, bannedToken := seedAuthUser(repo, func(u *database.User) {
-		u.Role = database.UserRoleAdmin
+		u.Role = database.UserRolePresident
 		u.Status = database.AccountStatusBanned
 	})
 
@@ -172,12 +175,20 @@ func TestMiddlewareAdminAuth(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name: "admin access granted",
+			name: "president access granted",
 			cookie: &http.Cookie{
 				Name:  "authToken",
-				Value: adminToken,
+				Value: presidentToken,
 			},
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "vice president denied",
+			cookie: &http.Cookie{
+				Name:  "authToken",
+				Value: vpToken,
+			},
+			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name: "regular user denied",
@@ -188,7 +199,7 @@ func TestMiddlewareAdminAuth(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name: "banned admin denied",
+			name: "banned president denied",
 			cookie: &http.Cookie{
 				Name:  "authToken",
 				Value: bannedToken,
@@ -205,8 +216,111 @@ func TestMiddlewareAdminAuth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			nextCalled := false
-			handler := h.MiddlewareAdminAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler := h.MiddlewareSeniorAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				nextCalled = true
+				u, ok := GetSenior(r.Context())
+				if !ok {
+					t.Errorf("expected senior in context")
+				}
+				if u.Role != database.UserRolePresident {
+					t.Errorf("expected president role")
+				}
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+			if tc.cookie != nil {
+				req.AddCookie(tc.cookie)
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tc.expectedStatus {
+				t.Errorf("expected %d, got %d: %s", tc.expectedStatus, rr.Code, rr.Body.String())
+			}
+
+			if tc.expectedStatus == http.StatusOK && !nextCalled {
+				t.Errorf("expected next handler to be called")
+			}
+			if tc.expectedStatus != http.StatusOK && nextCalled {
+				t.Errorf("expected next handler NOT to be called")
+			}
+		})
+	}
+}
+
+func TestMiddlewareModeratorAuth(t *testing.T) {
+	repo := newMockAuthRepo()
+	h := &Handler{Repo: repo}
+
+	_, presidentToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRolePresident
+	})
+	_, vpToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRoleVicePresident
+	})
+	_, userToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRoleMember
+	})
+	_, bannedToken := seedAuthUser(repo, func(u *database.User) {
+		u.Role = database.UserRolePresident
+		u.Status = database.AccountStatusBanned
+	})
+
+	tests := []struct {
+		name           string
+		cookie         *http.Cookie
+		expectedStatus int
+	}{
+		{
+			name: "president access granted",
+			cookie: &http.Cookie{
+				Name:  "authToken",
+				Value: presidentToken,
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "vice president access granted",
+			cookie: &http.Cookie{
+				Name:  "authToken",
+				Value: vpToken,
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "regular user denied",
+			cookie: &http.Cookie{
+				Name:  "authToken",
+				Value: userToken,
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "banned president denied",
+			cookie: &http.Cookie{
+				Name:  "authToken",
+				Value: bannedToken,
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "no cookie",
+			cookie:         nil,
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			nextCalled := false
+			handler := h.MiddlewareModeratorAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				nextCalled = true
+				_, ok := GetModerator(r.Context())
+				if !ok {
+					t.Errorf("expected moderator in context")
+				}
 				w.WriteHeader(http.StatusOK)
 			}))
 

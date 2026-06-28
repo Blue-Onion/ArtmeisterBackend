@@ -239,7 +239,7 @@ func (h *Handler) HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request
 		handler.RespondWithError(w, http.StatusBadRequest, "Invalid user ID format")
 		return
 	}
-	if user.Role != database.UserRoleAdmin && user.ID != userId {
+	if user.Role != database.UserRolePresident && user.ID != userId {
 		if log != nil {
 			log.Error(fmt.Sprintf("HandleUpdateUserProfile: user %s unauthorized to update profile %s", user.ID, userId))
 		}

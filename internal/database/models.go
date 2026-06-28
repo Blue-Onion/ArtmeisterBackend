@@ -145,8 +145,14 @@ func (ns NullModeOfConduct) Value() (driver.Value, error) {
 type UserRole string
 
 const (
-	UserRoleAdmin UserRole = "admin"
-	UserRoleUser  UserRole = "user"
+	UserRolePresident        UserRole = "president"
+	UserRoleVicePresident    UserRole = "vice_president"
+	UserRoleGeneralSecretary UserRole = "general_secretary"
+	UserRoleLogistic         UserRole = "logistic"
+	UserRoleSocialMediaHead  UserRole = "social_media_head"
+	UserRoleContentHead      UserRole = "content_head"
+	UserRoleCoreMember       UserRole = "core_member"
+	UserRoleMember           UserRole = "member"
 )
 
 func (e *UserRole) Scan(src interface{}) error {

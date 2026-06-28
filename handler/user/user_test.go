@@ -42,7 +42,7 @@ func (m *mockUserRepo) CreateUser(ctx context.Context, arg database.CreateUserPa
 		Password:  arg.Password,
 		Batch:     sql.NullString{String: "", Valid: true},
 		Status:    database.AccountStatusPending,
-		Role:      database.UserRoleUser,
+		Role:      database.UserRoleMember,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -225,7 +225,7 @@ func seedUser(repo *mockUserRepo, overrides ...func(*database.User)) (uuid.UUID,
 		Email:     fmt.Sprintf("user-%s@example.com", id.String()[:8]),
 		Password:  hashed,
 		Status:    database.AccountStatusApproved,
-		Role:      database.UserRoleUser,
+		Role:      database.UserRoleMember,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -466,7 +466,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 	userID, _ := seedUser(repo, func(u *database.User) {
 		u.Name = "Alice"
 		u.Email = "alice@example.com"
-		u.Role = database.UserRoleUser
+		u.Role = database.UserRoleMember
 		u.Status = database.AccountStatusApproved
 	})
 
@@ -483,7 +483,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: userID.String(),
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleUser,
+				Role: database.UserRoleMember,
 			},
 			body:           model.PatchUserProfileRequest{UserName: strPtr("Alice Updated")},
 			expectedStatus: http.StatusOK,
@@ -493,7 +493,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: uuid.New().String(),
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleUser,
+				Role: database.UserRoleMember,
 			},
 			body:           model.PatchUserProfileRequest{UserName: strPtr("Hacked")},
 			expectedStatus: http.StatusForbidden,
@@ -503,7 +503,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: uuid.New().String(),
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleAdmin,
+				Role: database.UserRolePresident,
 			},
 			body:           model.PatchUserProfileRequest{UserName: strPtr("Admin Edit")},
 			expectedStatus: http.StatusOK,
@@ -520,7 +520,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: "not-a-uuid",
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleUser,
+				Role: database.UserRoleMember,
 			},
 			body:           model.PatchUserProfileRequest{UserName: strPtr("X")},
 			expectedStatus: http.StatusBadRequest,
@@ -530,7 +530,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: userID.String(),
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleUser,
+				Role: database.UserRoleMember,
 			},
 			body:           "{bad-json}",
 			expectedStatus: http.StatusBadRequest,
@@ -540,7 +540,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 			userIDParam: userID.String(),
 			authCtxUser: &middleware.User{
 				ID:   userID,
-				Role: database.UserRoleUser,
+				Role: database.UserRoleMember,
 			},
 			body:           model.PatchUserProfileRequest{UserName: strPtr("Fail")},
 			mockErr:        fmt.Errorf("db connection lost"),
@@ -555,7 +555,7 @@ func TestHandleUpdateUserProfile(t *testing.T) {
 				repo.users[targetUUID] = database.User{
 					ID:     targetUUID,
 					Name:   "Other User",
-					Role:   database.UserRoleUser,
+					Role:   database.UserRoleMember,
 					Status: database.AccountStatusApproved,
 				}
 			}
