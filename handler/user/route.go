@@ -25,6 +25,7 @@ func UserRouter(userHandler *Handler, middlewareHandler *middleware.Handler) *ch
 	r.Patch("/users/password", auth(http.HandlerFunc(userHandler.HandlePasswordChange)))
 	r.Post("/logout", auth(http.HandlerFunc(userHandler.HandleLogOut)))
 	r.Get("/me", http.HandlerFunc(userHandler.HandleMe))
+	r.Get("/core-member", http.HandlerFunc(userHandler.HandleGetCoreMember))
 
 	return r
 }

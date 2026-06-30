@@ -424,3 +424,18 @@ func (h *Handler) HandleGetApprovedUser(w http.ResponseWriter, r *http.Request) 
 	}
 	handler.RespondWithJson(w, http.StatusOK, user)
 }
+func (h *Handler) HandleGetCoreMember(w http.ResponseWriter, r *http.Request) {
+	log, _ := logger.GetLogger()
+	user, err := h.Repo.GetCoreMembers(r.Context())
+	if err != nil {
+		if log != nil {
+			log.Error(fmt.Sprintf("HandleGetAllUser: Failed to get All User: %v", err))
+		}
+		handler.RespondWithJsonCustom(w, http.StatusOK, false, nil)
+		return
+	}
+	if log != nil {
+		log.Info("HandleGetAllUser: successfully")
+	}
+	handler.RespondWithJson(w, http.StatusOK, user)
+}
