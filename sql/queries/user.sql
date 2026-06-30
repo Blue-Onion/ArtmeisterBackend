@@ -138,3 +138,16 @@ SELECT
     role
 FROM users
 WHERE id = $1;
+
+
+-- name: GetCoreMembers :many
+SELECT 
+    id,
+    name,
+    email,
+    status,
+    role,
+    image
+FROM users
+WHERE role != 'member'
+  AND status != 'banned';

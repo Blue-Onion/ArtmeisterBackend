@@ -17,6 +17,7 @@ type UserRepository interface {
 	GetAllUserApproved(ctx context.Context) ([]GetAllUserApprovedRow, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error)
 	PatchUserPassword(ctx context.Context, arg PatchUserPasswordParams) (uuid.UUID, error)
+	GetCoreMembers(ctx context.Context) ([]GetCoreMembersRow, error)
 	CheckUsrById(ctx context.Context, id uuid.UUID) (CheckUsrByIdRow, error)
 }
 type ArtRepository interface {
